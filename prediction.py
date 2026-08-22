@@ -14,7 +14,7 @@ import joblib
 
 from features import MODEL_FEATURE_COLUMNS
 
-MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'models')
+MODELS_DIR = 'models'
 
 # Median fallback values for ratio/index features when a station's
 # Monitored_Capacity is zero (matches the Phase 7 training-time imputation).
