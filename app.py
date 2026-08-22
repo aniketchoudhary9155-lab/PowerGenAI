@@ -404,7 +404,38 @@ Predictive Maintenance Analytics
 # PAGE: DASHBOARD
 # ------------------------------------------------------------------
 if page == "📊 Dashboard":
-    st.title("📊 PowerGenAI Dashboard")
+    hero_html = """
+<div class="powergen-hero">
+
+    <div class="powergen-title">
+        ⚡ PowerGenAI Command Center
+    </div>
+
+    <div class="powergen-subtitle">
+        AI-Based Power Generation Forecasting &
+        Power Station Performance Monitoring
+    </div>
+
+    <div class="status-container">
+
+        <span class="status-pill status-green">
+            🟢 DATA ONLINE
+        </span>
+
+        <span class="status-pill status-green">
+            🟢 AI MODEL READY
+        </span>
+
+        <span class="status-pill status-blue">
+            🔵 ANALYTICS ACTIVE
+        </span>
+
+    </div>
+
+</div>
+"""
+
+st.markdown(hero_html, unsafe_allow_html=True)
 
     if not DATA_OK:
         st.stop()
