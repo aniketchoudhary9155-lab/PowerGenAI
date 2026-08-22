@@ -1,0 +1,13 @@
+feature,importance
+Available_Capacity,0.8132610983628372
+Programme,0.097960420832677
+Monitored_Capacity,0.08218376750470593
+Power_Station,0.0012437536105353178
+Maintenance_Impact_Index,0.0012364966042809464
+Forced_Maintenance_Ratio,0.0006824680504377909
+Planned_Maintenance_Ratio,0.0006433327494996796
+Other_Reason_Ratio,0.0006379927298232561
+Total_Maintenance,0.0005803687036145456
+Forced_Maintenance,0.0005694411364076839
+Planned_Maintenance,0.0005238097030966676
+Other_Reasons,0.00047705001208397317
