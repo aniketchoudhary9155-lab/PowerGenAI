@@ -14,7 +14,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from import prediction, analytics, alerts, utils
+import prediction, analytics, alerts, utils
 from features import MODEL_FEATURE_COLUMNS
 
 # ------------------------------------------------------------------
