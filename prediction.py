@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import joblib
 
-from .features import MODEL_FEATURE_COLUMNS
+from features import MODEL_FEATURE_COLUMNS
 
 MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'models')
 
