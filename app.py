@@ -322,25 +322,83 @@ model_comparison_df = load_model_comparison()
 feature_importance_df = load_feature_importance()
 
 # ------------------------------------------------------------------
-# SIDEBAR NAVIGATION
+# PROFESSIONAL SIDEBAR
 # ------------------------------------------------------------------
-st.sidebar.title("⚡ PowerGenAI")
-st.sidebar.caption("AI-Based Power Generation Forecasting & Monitoring")
-page = st.sidebar.radio("Navigate", [
-    "📊 Dashboard",
-    "🏭 Power Station Analysis",
-    "🔮 Generation Prediction",
-    "🎛️ What-If Simulator",
-    "🔧 Maintenance Analysis",
-    "📈 Model Performance",
-    "🧠 Explainable AI",
-    "📄 Reports",
-])
+
+st.sidebar.markdown("""
+<div style="padding: 8px 0 20px 0;">
+    <div style="
+        font-size: 28px;
+        font-weight: 850;
+        color: #ffffff;
+    ">
+        ⚡ PowerGenAI
+    </div>
+
+    <div style="
+        font-size: 11px;
+        color: #7892aa;
+        margin-top: 4px;
+        letter-spacing: 1px;
+    ">
+        AI POWER ANALYTICS PLATFORM
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+st.sidebar.markdown(
+    "<div style='font-size:11px;color:#607991;font-weight:700;"
+    "letter-spacing:1px;margin-bottom:8px;'>NAVIGATION</div>",
+    unsafe_allow_html=True
+)
+
+page = st.sidebar.radio(
+    "",
+    [
+        "📊 Dashboard",
+        "🏭 Power Station Analysis",
+        "🔮 Generation Prediction",
+        "🎛️ What-If Simulator",
+        "🔧 Maintenance Analysis",
+        "📈 Model Performance",
+        "🧠 Explainable AI",
+        "📄 Reports",
+    ]
+)
+
 st.sidebar.divider()
-st.sidebar.caption("Note: XGBoost & SHAP were unavailable in the original "
-                    "training sandbox (no internet access). HistGB substitutes "
-                    "XGBoost; a tree-path contribution method substitutes SHAP. "
-                    "Swap in the real libraries if you have connectivity.")
+
+# System status
+st.sidebar.markdown(
+    "<div style='font-size:11px;color:#607991;font-weight:700;"
+    "letter-spacing:1px;margin-bottom:10px;'>SYSTEM STATUS</div>",
+    unsafe_allow_html=True
+)
+
+if DATA_OK:
+    st.sidebar.success("🟢 Data Loaded")
+else:
+    st.sidebar.error("🔴 Data Unavailable")
+
+if MODELS_OK:
+    st.sidebar.success("🟢 AI Model Ready")
+else:
+    st.sidebar.warning("🟡 AI Model Unavailable")
+
+st.sidebar.divider()
+
+st.sidebar.markdown("""
+<div style="
+    color:#607991;
+    font-size:10px;
+    line-height:1.6;
+">
+<b>PowerGenAI v1.0</b><br>
+AI-Based Power Generation Forecasting<br>
+Station Performance Monitoring<br>
+Predictive Maintenance Analytics
+</div>
+""", unsafe_allow_html=True)
 
 # ------------------------------------------------------------------
 # PAGE: DASHBOARD
