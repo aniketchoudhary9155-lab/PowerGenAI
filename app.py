@@ -1,45 +1,60 @@
 """
-=============================================================
-POWERGENAI V2
-AI-Based Power Generation Forecasting & Monitoring System
-=============================================================
+PowerGenAI
+AI-Based Power Generation Forecasting & Power Station Performance Monitoring
 
 Run:
     streamlit run app.py
 
-=============================================================
+IMPORTANT:
+This file expects the existing PowerGenAI project structure:
+
+PowerGenAI/
+│
+├── app.py
+├── prediction.py
+├── analytics.py
+├── alerts.py
+├── utils.py
+├── features.py
+│
+├── data/
+│   └── processed/
+│       ├── powergeneration_features.csv
+│       └── station_performance_summary.csv
+│
+└── models/
+    ├── Random_Forest.joblib
+    ├── Linear_Regression.joblib
+    ├── Gradient_Boosting.joblib
+    ├── HistGB_XGBoost_substitute.joblib
+    ├── model_comparison.csv
+    └── feature_importance.csv
 """
+
+# ================================================================
+# IMPORTS
+# ================================================================
 
 import os
 import sys
 import time
-from datetime import datetime
 
 import numpy as np
 import pandas as pd
-import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
+import streamlit as st
 
 
-# ============================================================
-# 1. PROJECT PATH
-# ============================================================
+# ================================================================
+# PATH FIX
+# ================================================================
+# DO NOT change __file__ to _file_
 
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-if os.path.basename(CURRENT_DIR).lower() == "dashboard":
-    PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
-else:
-    PROJECT_ROOT = CURRENT_DIR
-
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
-
-
-# ============================================================
-# 2. PROJECT IMPORTS
-# ============================================================
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 
 try:
     import prediction
@@ -47,955 +62,592 @@ try:
     import alerts
     import utils
     from features import MODEL_FEATURE_COLUMNS
-
-    IMPORT_OK = True
-    IMPORT_ERROR = ""
-
 except Exception as e:
-    IMPORT_OK = False
-    IMPORT_ERROR = str(e)
+    st.error("PowerGenAI internal modules could not be imported.")
+    st.code(str(e))
+    st.stop()
 
 
-# ============================================================
-# 3. PAGE CONFIG
-# ============================================================
+# ================================================================
+# PAGE CONFIG
+# ================================================================
 
 st.set_page_config(
-    page_title="PowerGenAI | AI Power Control Room",
+    page_title="PowerGenAI | Smart Power Analytics",
     page_icon="⚡",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
 
-# ============================================================
-# 4. PREMIUM CSS
-# ============================================================
+# ================================================================
+# PREMIUM CSS
+# ================================================================
 
 st.markdown(
     """
-    <style>
+<style>
 
-    /* =====================================================
-       GLOBAL
-       ===================================================== */
+/* --------------------------------------------------------------
+   GLOBAL
+-------------------------------------------------------------- */
 
-    html, body, [class*="css"] {
-        font-family: Inter, -apple-system, BlinkMacSystemFont,
-        "Segoe UI", sans-serif;
+.stApp {
+    background:
+        radial-gradient(circle at 10% 10%, rgba(37,99,235,0.15), transparent 30%),
+        radial-gradient(circle at 90% 20%, rgba(124,58,237,0.12), transparent 30%),
+        linear-gradient(135deg, #050816 0%, #0b1120 45%, #111827 100%);
+    color: #f8fafc;
+}
+
+html, body, [class*="css"] {
+    font-family: "Segoe UI", sans-serif;
+}
+
+.block-container {
+    padding-top: 1.5rem;
+    padding-bottom: 3rem;
+    max-width: 1500px;
+}
+
+
+/* --------------------------------------------------------------
+   SIDEBAR
+-------------------------------------------------------------- */
+
+section[data-testid="stSidebar"] {
+    background:
+        linear-gradient(
+            180deg,
+            rgba(15,23,42,0.98),
+            rgba(2,6,23,0.98)
+        );
+    border-right: 1px solid rgba(148,163,184,0.15);
+}
+
+section[data-testid="stSidebar"] > div {
+    padding-top: 1.5rem;
+}
+
+
+/* --------------------------------------------------------------
+   SIDEBAR BRAND
+-------------------------------------------------------------- */
+
+.sidebar-brand {
+    padding: 20px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(37,99,235,0.25),
+            rgba(124,58,237,0.18)
+        );
+
+    border: 1px solid rgba(96,165,250,0.25);
+
+    box-shadow:
+        0 10px 40px rgba(0,0,0,0.25),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+
+    animation: fadeIn 0.8s ease;
+}
+
+.sidebar-logo {
+    font-size: 32px;
+}
+
+.sidebar-title {
+    font-size: 22px;
+    font-weight: 800;
+    margin-top: 5px;
+}
+
+.sidebar-subtitle {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+
+/* --------------------------------------------------------------
+   HERO
+-------------------------------------------------------------- */
+
+.hero {
+    position: relative;
+    overflow: hidden;
+
+    padding: 38px;
+    border-radius: 28px;
+    margin-bottom: 28px;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(37,99,235,0.28),
+            rgba(124,58,237,0.22),
+            rgba(15,23,42,0.75)
+        );
+
+    border: 1px solid rgba(147,197,253,0.20);
+
+    box-shadow:
+        0 20px 70px rgba(0,0,0,0.35),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+
+    backdrop-filter: blur(18px);
+
+    animation: fadeSlide 0.8s ease;
+}
+
+.hero::before {
+    content: "";
+    position: absolute;
+
+    width: 260px;
+    height: 260px;
+
+    right: -80px;
+    top: -100px;
+
+    border-radius: 50%;
+
+    background: rgba(59,130,246,0.20);
+
+    filter: blur(40px);
+
+    animation: floating 6s ease-in-out infinite;
+}
+
+.hero::after {
+    content: "";
+    position: absolute;
+
+    width: 180px;
+    height: 180px;
+
+    left: -80px;
+    bottom: -100px;
+
+    border-radius: 50%;
+
+    background: rgba(168,85,247,0.15);
+
+    filter: blur(35px);
+
+    animation: floating 7s ease-in-out infinite reverse;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+}
+
+.hero-icon {
+    font-size: 55px;
+}
+
+.hero-title {
+    font-size: 42px;
+    font-weight: 900;
+    margin: 5px 0;
+
+    background:
+        linear-gradient(
+            90deg,
+            #ffffff,
+            #93c5fd,
+            #c4b5fd
+        );
+
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero-subtitle {
+    color: #cbd5e1;
+    font-size: 16px;
+}
+
+
+/* --------------------------------------------------------------
+   KPI CARDS
+-------------------------------------------------------------- */
+
+.kpi-card {
+    padding: 22px;
+    min-height: 130px;
+
+    border-radius: 22px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(30,41,59,0.80),
+            rgba(15,23,42,0.65)
+        );
+
+    border: 1px solid rgba(148,163,184,0.16);
+
+    box-shadow:
+        0 12px 40px rgba(0,0,0,0.25),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+
+    backdrop-filter: blur(20px);
+
+    transition:
+        transform 0.3s ease,
+        box-shadow 0.3s ease,
+        border-color 0.3s ease;
+
+    animation: fadeSlide 0.7s ease;
+}
+
+.kpi-card:hover {
+    transform: translateY(-7px) scale(1.015);
+
+    border-color:
+        rgba(96,165,250,0.40);
+
+    box-shadow:
+        0 20px 50px rgba(37,99,235,0.18);
+}
+
+.kpi-icon {
+    font-size: 28px;
+}
+
+.kpi-label {
+    color: #94a3b8;
+    font-size: 13px;
+    margin-top: 5px;
+}
+
+.kpi-value {
+    font-size: 26px;
+    font-weight: 800;
+    margin-top: 6px;
+}
+
+
+/* --------------------------------------------------------------
+   SECTION HEADERS
+-------------------------------------------------------------- */
+
+.section-title {
+    font-size: 24px;
+    font-weight: 800;
+    margin-top: 15px;
+    margin-bottom: 5px;
+}
+
+.section-subtitle {
+    color: #94a3b8;
+    margin-bottom: 20px;
+}
+
+
+/* --------------------------------------------------------------
+   GLASS PANEL
+-------------------------------------------------------------- */
+
+.glass {
+    padding: 24px;
+
+    border-radius: 22px;
+
+    background:
+        rgba(15,23,42,0.62);
+
+    border:
+        1px solid rgba(148,163,184,0.15);
+
+    backdrop-filter:
+        blur(18px);
+
+    box-shadow:
+        0 15px 45px rgba(0,0,0,0.22),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+
+    animation:
+        fadeIn 0.7s ease;
+}
+
+
+/* --------------------------------------------------------------
+   STATUS
+-------------------------------------------------------------- */
+
+.status-online {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 8px 14px;
+
+    border-radius: 999px;
+
+    background: rgba(34,197,94,0.12);
+
+    border:
+        1px solid rgba(34,197,94,0.25);
+
+    color: #86efac;
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+
+    background: #22c55e;
+
+    border-radius: 50%;
+
+    box-shadow:
+        0 0 10px #22c55e;
+
+    animation:
+        pulse 1.6s infinite;
+}
+
+
+/* --------------------------------------------------------------
+   BUTTONS
+-------------------------------------------------------------- */
+
+.stButton > button {
+    border-radius: 14px !important;
+
+    border:
+        1px solid rgba(96,165,250,0.30) !important;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(37,99,235,0.85),
+            rgba(79,70,229,0.85)
+        ) !important;
+
+    color: white !important;
+
+    font-weight: 700 !important;
+
+    transition:
+        all 0.25s ease !important;
+
+    box-shadow:
+        0 8px 25px rgba(37,99,235,0.20) !important;
+}
+
+.stButton > button:hover {
+    transform:
+        translateY(-3px)
+        scale(1.01);
+
+    box-shadow:
+        0 14px 35px rgba(37,99,235,0.35) !important;
+}
+
+
+/* --------------------------------------------------------------
+   INPUTS
+-------------------------------------------------------------- */
+
+.stSelectbox > div > div,
+.stNumberInput > div > div,
+.stTextInput > div > div,
+.stSlider {
+    border-radius: 12px;
+}
+
+
+/* --------------------------------------------------------------
+   DATAFRAME
+-------------------------------------------------------------- */
+
+[data-testid="stDataFrame"] {
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+
+/* --------------------------------------------------------------
+   ANIMATIONS
+-------------------------------------------------------------- */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
     }
 
-    .stApp {
-        background:
-            radial-gradient(
-                circle at 10% 10%,
-                rgba(37,99,235,0.18),
-                transparent 28%
-            ),
-            radial-gradient(
-                circle at 90% 20%,
-                rgba(6,182,212,0.12),
-                transparent 25%
-            ),
-            radial-gradient(
-                circle at 50% 100%,
-                rgba(124,58,237,0.10),
-                transparent 30%
-            ),
-            linear-gradient(
-                135deg,
-                #020617 0%,
-                #071426 45%,
-                #020617 100%
-            );
+    to {
+        opacity: 1;
+    }
+}
 
-        color: #e2e8f0;
+@keyframes fadeSlide {
+    from {
+        opacity: 0;
+        transform: translateY(15px);
     }
 
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 
-    /* =====================================================
-       ANIMATED BACKGROUND
-       ===================================================== */
-
-    .stApp::before {
-        content: "";
-        position: fixed;
-        width: 500px;
-        height: 500px;
-        left: -180px;
-        top: 15%;
-        background: rgba(37,99,235,0.08);
-        border-radius: 50%;
-        filter: blur(100px);
-        animation: floatOrb 12s ease-in-out infinite;
-        pointer-events: none;
-        z-index: 0;
+@keyframes floating {
+    0%, 100% {
+        transform: translateY(0px);
     }
 
-    .stApp::after {
-        content: "";
-        position: fixed;
-        width: 450px;
-        height: 450px;
-        right: -180px;
-        bottom: 10%;
-        background: rgba(6,182,212,0.07);
-        border-radius: 50%;
-        filter: blur(100px);
-        animation: floatOrb2 15s ease-in-out infinite;
-        pointer-events: none;
-        z-index: 0;
+    50% {
+        transform: translateY(20px);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(34,197,94,0.6);
     }
 
-    @keyframes floatOrb {
-
-        0%,100% {
-            transform: translate(0,0) scale(1);
-        }
-
-        50% {
-            transform: translate(100px,-60px) scale(1.2);
-        }
-
+    70% {
+        box-shadow: 0 0 0 10px rgba(34,197,94,0);
     }
 
-    @keyframes floatOrb2 {
-
-        0%,100% {
-            transform: translate(0,0) scale(1);
-        }
-
-        50% {
-            transform: translate(-100px,50px) scale(1.15);
-        }
-
+    100% {
+        box-shadow: 0 0 0 0 rgba(34,197,94,0);
     }
-
-
-    /* =====================================================
-       MAIN CONTAINER
-       ===================================================== */
-
-    .main .block-container {
-        max-width: 1550px;
-        padding-top: 1.5rem;
-        padding-bottom: 4rem;
-        position: relative;
-        z-index: 1;
-    }
-
-
-    /* =====================================================
-       SIDEBAR
-       ===================================================== */
-
-    section[data-testid="stSidebar"] {
-
-        background:
-            linear-gradient(
-                180deg,
-                rgba(2,6,23,0.98),
-                rgba(7,20,38,0.96)
-            );
-
-        border-right: 1px solid rgba(148,163,184,0.10);
-
-    }
-
-    section[data-testid="stSidebar"] * {
-        color: #dbeafe;
-    }
-
-
-    /* =====================================================
-       SIDEBAR BRAND
-       ===================================================== */
-
-    .brand {
-
-        text-align: center;
-
-        padding: 12px 5px 20px;
-
-    }
-
-    .brand-icon {
-
-        font-size: 3.2rem;
-
-        display: inline-block;
-
-        animation: pulsePower 2s infinite;
-
-        filter:
-            drop-shadow(0 0 10px rgba(59,130,246,0.8));
-
-    }
-
-    @keyframes pulsePower {
-
-        0%,100% {
-            transform: scale(1);
-            filter:
-                drop-shadow(0 0 8px rgba(59,130,246,0.6));
-        }
-
-        50% {
-            transform: scale(1.12);
-            filter:
-                drop-shadow(0 0 25px rgba(59,130,246,1));
-        }
-
-    }
-
-    .brand-name {
-
-        font-size: 1.65rem;
-        font-weight: 900;
-        color: white;
-
-    }
-
-    .brand-sub {
-
-        font-size: 0.72rem;
-        color: #64748b;
-
-    }
-
-
-    /* =====================================================
-       HERO
-       ===================================================== */
-
-    .hero {
-
-        position: relative;
-        overflow: hidden;
-
-        background:
-            linear-gradient(
-                135deg,
-                rgba(15,42,75,0.88),
-                rgba(8,20,37,0.78)
-            );
-
-        border:
-            1px solid rgba(96,165,250,0.20);
-
-        border-radius: 26px;
-
-        padding: 32px;
-
-        margin-bottom: 25px;
-
-        box-shadow:
-            0 20px 60px rgba(0,0,0,0.35),
-            inset 0 1px 0 rgba(255,255,255,0.05);
-
-        backdrop-filter: blur(20px);
-
-    }
-
-    .hero::after {
-
-        content: "";
-
-        position: absolute;
-
-        width: 350px;
-        height: 350px;
-
-        right: -120px;
-        top: -180px;
-
-        background:
-            radial-gradient(
-                circle,
-                rgba(59,130,246,0.30),
-                transparent 65%
-            );
-
-        animation: heroGlow 7s ease-in-out infinite;
-
-    }
-
-    @keyframes heroGlow {
-
-        0%,100% {
-            transform: scale(1);
-            opacity: 0.7;
-        }
-
-        50% {
-            transform: scale(1.25);
-            opacity: 1;
-        }
-
-    }
-
-    .hero-title {
-
-        font-size: 2.65rem;
-        font-weight: 900;
-        color: white;
-        letter-spacing: -1.5px;
-
-    }
-
-    .hero-subtitle {
-
-        color: #93c5fd;
-        margin-top: 5px;
-        font-size: 1rem;
-
-    }
-
-
-    /* =====================================================
-       LIVE INDICATOR
-       ===================================================== */
-
-    .live {
-
-        display: inline-flex;
-
-        align-items: center;
-
-        gap: 8px;
-
-        padding: 7px 13px;
-
-        border-radius: 999px;
-
-        background:
-            rgba(34,197,94,0.10);
-
-        border:
-            1px solid rgba(34,197,94,0.25);
-
-        color: #86efac;
-
-        font-size: 0.75rem;
-
-        font-weight: 800;
-
-        margin-top: 15px;
-
-    }
-
-    .live-dot {
-
-        width: 9px;
-        height: 9px;
-
-        background: #22c55e;
-
-        border-radius: 50%;
-
-        box-shadow:
-            0 0 0 0 rgba(34,197,94,0.7);
-
-        animation: livePulse 1.5s infinite;
-
-    }
-
-    @keyframes livePulse {
-
-        0% {
-            box-shadow:
-                0 0 0 0 rgba(34,197,94,0.7);
-        }
-
-        70% {
-            box-shadow:
-                0 0 0 9px rgba(34,197,94,0);
-        }
-
-        100% {
-            box-shadow:
-                0 0 0 0 rgba(34,197,94,0);
-        }
-
-    }
-
-
-    /* =====================================================
-       GLASS KPI
-       ===================================================== */
-
-    .glass-card {
-
-        background:
-            linear-gradient(
-                145deg,
-                rgba(30,41,59,0.70),
-                rgba(15,23,42,0.55)
-            );
-
-        border:
-            1px solid rgba(148,163,184,0.12);
-
-        border-radius: 20px;
-
-        padding: 20px;
-
-        min-height: 130px;
-
-        box-shadow:
-            0 12px 35px rgba(0,0,0,0.25),
-            inset 0 1px 0 rgba(255,255,255,0.04);
-
-        backdrop-filter: blur(18px);
-
-        transition:
-            transform 0.30s ease,
-            border-color 0.30s ease,
-            box-shadow 0.30s ease;
-
-        animation: cardAppear 0.65s ease both;
-
-    }
-
-    .glass-card:hover {
-
-        transform:
-            translateY(-7px)
-            scale(1.015);
-
-        border-color:
-            rgba(96,165,250,0.38);
-
-        box-shadow:
-            0 20px 45px rgba(0,0,0,0.38),
-            0 0 25px rgba(37,99,235,0.08);
-
-    }
-
-    @keyframes cardAppear {
-
-        from {
-            opacity: 0;
-            transform: translateY(15px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-    }
-
-    .metric-label {
-
-        color: #94a3b8;
-
-        font-size: 0.72rem;
-
-        text-transform: uppercase;
-
-        letter-spacing: 1px;
-
-        font-weight: 700;
-
-    }
-
-    .metric-number {
-
-        color: #f8fafc;
-
-        font-size: 1.7rem;
-
-        font-weight: 900;
-
-        margin-top: 8px;
-
-    }
-
-    .metric-info {
-
-        color: #60a5fa;
-
-        font-size: 0.72rem;
-
-        margin-top: 7px;
-
-    }
-
-
-    /* =====================================================
-       SECTION
-       ===================================================== */
-
-    .section {
-
-        background:
-            rgba(15,23,42,0.58);
-
-        border:
-            1px solid rgba(148,163,184,0.10);
-
-        border-radius: 20px;
-
-        padding: 20px;
-
-        margin: 12px 0;
-
-        backdrop-filter: blur(16px);
-
-    }
-
-
-    /* =====================================================
-       STATUS
-       ===================================================== */
-
-    .status-good {
-
-        display: inline-block;
-
-        background:
-            rgba(34,197,94,0.12);
-
-        color: #86efac;
-
-        border:
-            1px solid rgba(34,197,94,0.20);
-
-        border-radius: 999px;
-
-        padding: 6px 12px;
-
-        font-size: 0.75rem;
-
-        font-weight: 800;
-
-    }
-
-    .status-warning {
-
-        display: inline-block;
-
-        background:
-            rgba(245,158,11,0.12);
-
-        color: #fcd34d;
-
-        border:
-            1px solid rgba(245,158,11,0.20);
-
-        border-radius: 999px;
-
-        padding: 6px 12px;
-
-        font-size: 0.75rem;
-
-        font-weight: 800;
-
-    }
-
-    .status-danger {
-
-        display: inline-block;
-
-        background:
-            rgba(239,68,68,0.12);
-
-        color: #fca5a5;
-
-        border:
-            1px solid rgba(239,68,68,0.20);
-
-        border-radius: 999px;
-
-        padding: 6px 12px;
-
-        font-size: 0.75rem;
-
-        font-weight: 800;
-
-    }
-
-
-    /* =====================================================
-       BUTTONS
-       ===================================================== */
-
-    .stButton > button {
-
-        border-radius: 12px !important;
-
-        border:
-            1px solid rgba(96,165,250,0.25) !important;
-
-        background:
-            linear-gradient(
-                135deg,
-                #2563eb,
-                #1d4ed8
-            ) !important;
-
-        color: white !important;
-
-        font-weight: 800 !important;
-
-        transition:
-            all 0.25s ease !important;
-
-    }
-
-    .stButton > button:hover {
-
-        transform:
-            translateY(-3px);
-
-        box-shadow:
-            0 10px 30px rgba(37,99,235,0.35);
-
-    }
-
-
-    /* =====================================================
-       INPUTS
-       ===================================================== */
-
-    div[data-baseweb="select"] > div {
-
-        background:
-            rgba(15,23,42,0.75) !important;
-
-        border-radius: 12px !important;
-
-        border:
-            1px solid rgba(148,163,184,0.15) !important;
-
-    }
-
-    input {
-
-        background:
-            rgba(15,23,42,0.65) !important;
-
-        color: white !important;
-
-    }
-
-
-    /* =====================================================
-       TABS
-       ===================================================== */
-
-    button[data-baseweb="tab"] {
-
-        transition: all 0.25s ease;
-
-    }
-
-
-    /* =====================================================
-       FOOTER
-       ===================================================== */
-
-    .footer {
-
-        text-align: center;
-
-        color: #64748b;
-
-        font-size: 0.75rem;
-
-        padding: 25px;
-
-        margin-top: 40px;
-
-    }
-
-
-    /* =====================================================
-       SCROLLBAR
-       ===================================================== */
-
-    ::-webkit-scrollbar {
-
-        width: 7px;
-
-    }
-
-    ::-webkit-scrollbar-track {
-
-        background: #020617;
-
-    }
-
-    ::-webkit-scrollbar-thumb {
-
-        background: #1e40af;
-
-        border-radius: 20px;
-
-    }
-
-    </style>
-    """,
-    unsafe_allow_html=True
+}
+
+
+/* --------------------------------------------------------------
+   FOOTER
+-------------------------------------------------------------- */
+
+.footer {
+    text-align: center;
+    color: #64748b;
+    padding: 30px 10px 10px;
+    font-size: 12px;
+}
+
+</style>
+""",
+    unsafe_allow_html=True,
 )
 
 
-# ============================================================
-# 5. HELPER FUNCTIONS
-# ============================================================
+# ================================================================
+# DIRECTORIES
+# ================================================================
 
-def safe_mw(value):
-
-    try:
-        return f"{float(value):,.2f} MW"
-    except Exception:
-        return "N/A"
+DATA_DIR = os.path.join(ROOT_DIR, "data", "processed")
+MODELS_DIR = os.path.join(ROOT_DIR, "models")
 
 
-def safe_pct(value):
-
-    try:
-        return f"{float(value):,.2f}%"
-    except Exception:
-        return "N/A"
-
-
-def glass_metric(
-    title,
-    value,
-    subtitle="",
-    icon="⚡"
-):
-
-    st.markdown(
-        f"""
-        <div class="glass-card">
-
-            <div style="
-                display:flex;
-                justify-content:space-between;
-                align-items:center;
-            ">
-
-                <div class="metric-label">
-                    {title}
-                </div>
-
-                <div style="
-                    font-size:1.5rem;
-                ">
-                    {icon}
-                </div>
-
-            </div>
-
-            <div class="metric-number">
-                {value}
-            </div>
-
-            <div class="metric-info">
-                {subtitle}
-            </div>
-
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-
-def risk_html(risk):
-
-    risk = str(risk).upper()
-
-    if risk == "LOW":
-
-        return (
-            '<span class="status-good">'
-            '🟢 LOW RISK'
-            '</span>'
-        )
-
-    if risk == "MEDIUM":
-
-        return (
-            '<span class="status-warning">'
-            '🟡 MEDIUM RISK'
-            '</span>'
-        )
-
-    if risk == "HIGH":
-
-        return (
-            '<span class="status-warning">'
-            '🟠 HIGH RISK'
-            '</span>'
-        )
-
-    return (
-        '<span class="status-danger">'
-        '🔴 CRITICAL RISK'
-        '</span>'
-    )
-
-
-def section_header(
-    title,
-    subtitle=""
-):
-
-    st.markdown(
-        f"""
-        <div style="
-            margin:18px 0 10px 0;
-        ">
-
-            <div style="
-                font-size:1.25rem;
-                font-weight:800;
-                color:#f8fafc;
-            ">
-                {title}
-            </div>
-
-            <div style="
-                font-size:0.78rem;
-                color:#64748b;
-                margin-top:3px;
-            ">
-                {subtitle}
-            </div>
-
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-
-# ============================================================
-# 6. LOAD DATA
-# ============================================================
+# ================================================================
+# DATA LOADING
+# ================================================================
 
 @st.cache_data
 def load_data():
-
-    features_file = os.path.join(
-        PROJECT_ROOT,
-        "data",
-        "processed",
+    data_path = os.path.join(
+        DATA_DIR,
         "powergeneration_features.csv"
     )
 
-    station_file = os.path.join(
-        PROJECT_ROOT,
-        "data",
-        "processed",
+    station_path = os.path.join(
+        DATA_DIR,
         "station_performance_summary.csv"
     )
 
-    df = pd.read_csv(features_file)
+    if not os.path.exists(data_path):
+        raise FileNotFoundError(
+            f"Missing file:\n{data_path}"
+        )
 
-    station_perf = pd.read_csv(
-        station_file
-    )
+    if not os.path.exists(station_path):
+        raise FileNotFoundError(
+            f"Missing file:\n{station_path}"
+        )
+
+    df = pd.read_csv(data_path)
+    station_perf = pd.read_csv(station_path)
 
     return df, station_perf
 
 
-# ============================================================
-# 7. LOAD MODELS
-# ============================================================
-
 @st.cache_resource
 def load_models():
 
-    names = [
+    models = {}
+    errors = {}
+
+    model_names = [
         "Random_Forest",
         "Linear_Regression",
         "Gradient_Boosting",
-        "HistGB_XGBoost_substitute"
+        "HistGB_XGBoost_substitute",
     ]
 
-    loaded = {}
-    errors = {}
-
-    for name in names:
+    for name in model_names:
 
         path = os.path.join(
-            PROJECT_ROOT,
-            "models",
+            MODELS_DIR,
             f"{name}.joblib"
         )
 
         if not os.path.exists(path):
+            errors[name] = "Model file not found."
             continue
 
         try:
-
-            loaded[name] = prediction.load_model(
-                name
-            )
+            models[name] = prediction.load_model(name)
 
         except Exception as e:
-
             errors[name] = str(e)
 
-    return loaded, errors
+    return models, errors
 
-
-# ============================================================
-# 8. OTHER MODEL FILES
-# ============================================================
 
 @st.cache_data
 def load_model_comparison():
 
     path = os.path.join(
-        PROJECT_ROOT,
-        "models",
+        MODELS_DIR,
         "model_comparison.csv"
     )
 
-    if os.path.exists(path):
+    if not os.path.exists(path):
+        return pd.DataFrame()
 
-        return pd.read_csv(path)
-
-    return pd.DataFrame()
+    return pd.read_csv(path)
 
 
 @st.cache_data
 def load_feature_importance():
 
     path = os.path.join(
-        PROJECT_ROOT,
-        "models",
+        MODELS_DIR,
         "feature_importance.csv"
     )
 
-    if os.path.exists(path):
+    if not os.path.exists(path):
+        return pd.DataFrame()
 
-        return pd.read_csv(path)
-
-    return pd.DataFrame()
+    return pd.read_csv(path)
 
 
-# ============================================================
-# 9. INITIALIZE
-# ============================================================
-
-if not IMPORT_OK:
-
-    st.error(
-        "❌ PowerGenAI modules could not be imported."
-    )
-
-    st.code(
-        IMPORT_ERROR,
-        language="text"
-    )
-
-    st.stop()
-
+# ================================================================
+# LOAD EVERYTHING
+# ================================================================
 
 try:
 
@@ -1007,17 +659,14 @@ except Exception as e:
 
     DATA_OK = False
 
-    st.error(
-        "❌ PowerGenAI data could not be loaded."
-    )
+    st.error("⚠️ PowerGenAI data could not be loaded.")
 
-    st.code(
-        str(e),
-        language="text"
-    )
+    st.code(str(e))
 
     st.info(
-        "Check your data/processed folder."
+        "Check that data/processed contains "
+        "powergeneration_features.csv and "
+        "station_performance_summary.csv."
     )
 
     st.stop()
@@ -1027,777 +676,599 @@ try:
 
     models, model_errors = load_models()
 
-    MODELS_OK = (
-        "Random_Forest" in models
-    )
+    MODELS_OK = "Random_Forest" in models
 
 except Exception as e:
 
     models = {}
-
-    model_errors = {
-        "System": str(e)
-    }
+    model_errors = {}
 
     MODELS_OK = False
 
+    st.error("⚠️ Model loading failed.")
 
-model_comparison_df = (
-    load_model_comparison()
+    st.code(str(e))
+
+
+model_comparison_df = load_model_comparison()
+feature_importance_df = load_feature_importance()
+
+
+# ================================================================
+# GLOBAL METRICS
+# ================================================================
+
+total_stations = df["Power_Station"].nunique()
+
+total_actual = df["Actual"].sum()
+
+total_programme = df["Programme"].sum()
+
+total_shortfall = df.loc[
+    df["Excess_Shortfall"] < 0,
+    "Excess_Shortfall"
+].sum()
+
+avg_achievement = (
+    total_actual / total_programme * 100
+    if total_programme > 0
+    else 0
 )
 
-feature_importance_df = (
-    load_feature_importance()
+
+# ================================================================
+# SIDEBAR
+# ================================================================
+
+st.sidebar.markdown(
+    """
+<div class="sidebar-brand">
+
+<div class="sidebar-logo">⚡</div>
+
+<div class="sidebar-title">
+PowerGenAI
+</div>
+
+<div class="sidebar-subtitle">
+Smart Power Generation Intelligence
+</div>
+
+</div>
+""",
+    unsafe_allow_html=True,
 )
 
 
-# ============================================================
-# 10. SIDEBAR
-# ============================================================
-
-with st.sidebar:
-
-    st.markdown(
-        """
-        <div class="brand">
-
-            <div class="brand-icon">
-                ⚡
-            </div>
-
-            <div class="brand-name">
-                PowerGenAI
-            </div>
-
-            <div class="brand-sub">
-                AI POWER CONTROL ROOM
-            </div>
-
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    st.divider()
-
-    st.markdown(
-        "### 🧭 Navigation"
-    )
-
-    page = st.radio(
-        "Select Module",
-        [
-            "📊 Command Center",
-            "🏭 Station Intelligence",
-            "🔮 AI Prediction",
-            "🎛️ What-If Simulator",
-            "🔧 Maintenance AI",
-            "📈 Model Performance",
-            "🧠 Explainable AI",
-            "🚨 Alert Center",
-            "📄 Smart Reports",
-            "📋 Data Explorer"
-        ],
-        label_visibility="collapsed"
-    )
-
-    st.divider()
-
-    st.markdown(
-        "### 🖥️ System Status"
-    )
-
-    st.markdown(
-        '<span class="status-good">'
-        '● SYSTEM ONLINE'
-        '</span>',
-        unsafe_allow_html=True
-    )
-
-    if MODELS_OK:
-
-        st.markdown(
-            '<span class="status-good">'
-            '● AI MODEL READY'
-            '</span>',
-            unsafe_allow_html=True
-        )
-
-    else:
-
-        st.markdown(
-            '<span class="status-danger">'
-            '● AI MODEL OFFLINE'
-            '</span>',
-            unsafe_allow_html=True
-        )
-
-    st.divider()
-
-    if st.button(
-        "🔄 Refresh System",
-        use_container_width=True
-    ):
-
-        st.cache_data.clear()
-        st.cache_resource.clear()
-        st.rerun()
-
-    st.divider()
-
-    st.caption(
-        "PowerGenAI v2.0"
-    )
-
-    st.caption(
-        "AI-Based Power Generation Forecasting"
-    )
+st.sidebar.markdown(
+    """
+<div class="status-online">
+<span class="status-dot"></span>
+SYSTEM ONLINE
+</div>
+""",
+    unsafe_allow_html=True,
+)
 
 
-# ============================================================
-# 11. COMMAND CENTER
-# ============================================================
+st.sidebar.write("")
 
-if page == "📊 Command Center":
 
-    now = datetime.now().strftime(
-        "%d %b %Y • %I:%M:%S %p"
-    )
+page = st.sidebar.radio(
+    "NAVIGATION",
+    [
+        "📊 Dashboard",
+        "🏭 Power Station Analysis",
+        "🔮 Generation Prediction",
+        "🎛️ What-If Simulator",
+        "🔧 Maintenance Analysis",
+        "📈 Model Performance",
+        "🧠 Explainable AI",
+        "📄 Reports",
+    ],
+)
+
+
+st.sidebar.divider()
+
+
+st.sidebar.markdown(
+    """
+### ⚡ PowerGenAI
+
+AI-powered monitoring and forecasting platform.
+
+**Core Technologies**
+- Machine Learning
+- Random Forest
+- Gradient Boosting
+- Predictive Analytics
+- Explainable AI
+- Interactive Visualization
+
+**Project Status**
+🟢 Data Engine  
+🟢 ML Engine  
+🟢 Analytics Engine  
+🟢 Dashboard  
+""",
+)
+
+
+# ================================================================
+# HELPER FUNCTIONS
+# ================================================================
+
+def hero(title, subtitle, icon="⚡"):
 
     st.markdown(
         f"""
-        <div class="hero">
+<div class="hero">
 
-            <div class="hero-title">
-                ⚡ PowerGenAI Command Center
-            </div>
+<div class="hero-content">
 
-            <div class="hero-subtitle">
-                Intelligent power generation forecasting,
-                performance monitoring & operational analytics
-            </div>
+<div class="hero-icon">
+{icon}
+</div>
 
-            <div class="live">
-                <span class="live-dot"></span>
-                LIVE MONITORING • {now}
-            </div>
+<div class="hero-title">
+{title}
+</div>
 
-        </div>
-        """,
-        unsafe_allow_html=True
+<div class="hero-subtitle">
+{subtitle}
+</div>
+
+</div>
+
+</div>
+""",
+        unsafe_allow_html=True,
     )
 
-    station_filter = st.selectbox(
-        "🏭 Monitor Station",
-        ["All Stations"] +
-        sorted(
-            df["Power_Station"]
-            .dropna()
-            .unique()
-            .tolist()
-        )
+
+def kpi(icon, label, value):
+
+    st.markdown(
+        f"""
+<div class="kpi-card">
+
+<div class="kpi-icon">
+{icon}
+</div>
+
+<div class="kpi-label">
+{label}
+</div>
+
+<div class="kpi-value">
+{value}
+</div>
+
+</div>
+""",
+        unsafe_allow_html=True,
     )
 
-    if station_filter == "All Stations":
 
-        view = df.copy()
+def section(title, subtitle=""):
 
-    else:
+    st.markdown(
+        f"""
+<div class="section-title">
+{title}
+</div>
 
-        view = df[
-            df["Power_Station"] ==
-            station_filter
-        ].copy()
-
-    if view.empty:
-
-        st.warning(
-            "No records available."
-        )
-
-        st.stop()
-
-    stations = view[
-        "Power_Station"
-    ].nunique()
-
-    programme = view[
-        "Programme"
-    ].sum()
-
-    actual = view[
-        "Actual"
-    ].sum()
-
-    shortfall = view.loc[
-        view["Excess_Shortfall"] < 0,
-        "Excess_Shortfall"
-    ].sum()
-
-    maintenance = (
-        view["Total_Maintenance"].sum()
-        if "Total_Maintenance" in view.columns
-        else 0
+<div class="section-subtitle">
+{subtitle}
+</div>
+""",
+        unsafe_allow_html=True,
     )
 
-    achievement = (
-        actual / programme * 100
-        if programme
-        else 0
+
+# ================================================================
+# DASHBOARD
+# ================================================================
+
+if page == "📊 Dashboard":
+
+    hero(
+        "PowerGenAI Command Center",
+        "AI-powered real-time style monitoring and generation intelligence",
+        "⚡",
     )
 
-    capacity = (
-        view["Monitored_Capacity"].sum()
-        if "Monitored_Capacity" in view.columns
-        else 0
-    )
+    # ------------------------------------------------------------
+    # TOP KPIs
+    # ------------------------------------------------------------
 
-    # --------------------------------------------------------
-    # KPI ROW 1
-    # --------------------------------------------------------
+    cols = st.columns(4)
 
-    c1, c2, c3, c4 = st.columns(4)
-
-    with c1:
-
-        glass_metric(
+    with cols[0]:
+        kpi(
+            "🏭",
             "Power Stations",
-            f"{stations}",
-            "Active monitored stations",
-            "🏭"
+            f"{total_stations:,}",
         )
 
-    with c2:
-
-        glass_metric(
-            "Total Capacity",
-            safe_mw(capacity),
-            "Monitored generation capacity",
-            "⚡"
+    with cols[1]:
+        kpi(
+            "⚡",
+            "Total Actual",
+            utils.fmt_mw(total_actual),
         )
 
-    with c3:
-
-        glass_metric(
+    with cols[2]:
+        kpi(
+            "🎯",
             "Programme",
-            safe_mw(programme),
-            "Target generation",
-            "🎯"
+            utils.fmt_mw(total_programme),
         )
 
-    with c4:
-
-        glass_metric(
-            "Actual Generation",
-            safe_mw(actual),
-            "Recorded generation",
-            "🔋"
+    with cols[3]:
+        kpi(
+            "📈",
+            "Achievement",
+            utils.fmt_pct(avg_achievement),
         )
 
     st.write("")
 
-    # --------------------------------------------------------
-    # KPI ROW 2
-    # --------------------------------------------------------
+    # ------------------------------------------------------------
+    # FILTER
+    # ------------------------------------------------------------
 
-    c1, c2, c3, c4 = st.columns(4)
-
-    with c1:
-
-        glass_metric(
-            "Achievement",
-            safe_pct(achievement),
-            "Programme achievement",
-            "📈"
-        )
-
-    with c2:
-
-        glass_metric(
-            "Shortfall",
-            safe_mw(shortfall),
-            "Generation deficit",
-            "⚠️"
-        )
-
-    with c3:
-
-        glass_metric(
-            "Maintenance",
-            safe_mw(maintenance),
-            "Total maintenance impact",
-            "🔧"
-        )
-
-    with c4:
-
-        glass_metric(
-            "Data Records",
-            f"{len(view):,}",
-            "Operational records",
-            "📊"
-        )
-
-    st.divider()
-
-    # --------------------------------------------------------
-    # PERFORMANCE GAUGE
-    # --------------------------------------------------------
-
-    section_header(
-        "🎯 Overall Station Performance",
-        "AI monitoring overview"
-    )
-
-    gauge_col, insight_col = st.columns(
-        [1.1, 1]
-    )
-
-    with gauge_col:
-
-        gauge = go.Figure(
-            go.Indicator(
-                mode="gauge+number",
-                value=min(
-                    max(achievement, 0),
-                    120
-                ),
-                number={
-                    "suffix": "%"
-                },
-                title={
-                    "text":
-                    "Programme Achievement"
-                },
-                gauge={
-                    "axis": {
-                        "range": [0, 120]
-                    },
-                    "bar": {
-                        "thickness": 0.25
-                    },
-                    "threshold": {
-                        "line": {
-                            "width": 5
-                        },
-                        "value": 100
-                    }
-                }
-            )
-        )
-
-        gauge.update_layout(
-            template="plotly_dark",
-            height=350,
-            margin=dict(
-                l=20,
-                r=20,
-                t=70,
-                b=20
-            )
-        )
-
-        st.plotly_chart(
-            gauge,
-            use_container_width=True
-        )
-
-    with insight_col:
-
-        st.markdown(
-            """
-            <div class="section">
-
-                <h3>🤖 AI Operational Insight</h3>
-
-                <p>
-                PowerGenAI continuously evaluates generation,
-                programme achievement and maintenance impact
-                to support operational decision-making.
-                </p>
-
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-        if achievement >= 100:
-
-            st.success(
-                "🟢 Generation is meeting or exceeding the programme."
-            )
-
-        elif achievement >= 90:
-
-            st.warning(
-                "🟡 Generation is slightly below the programme."
-            )
-
-        else:
-
-            st.error(
-                "🔴 Significant generation shortfall detected."
-            )
-
-        if maintenance > 0:
-
-            st.info(
-                "🔧 Maintenance activity is contributing "
-                "to available-capacity reduction."
-            )
-
-    # --------------------------------------------------------
-    # CHARTS
-    # --------------------------------------------------------
-
-    st.divider()
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-
-        section_header(
-            "📈 Generation Distribution",
-            "Actual generation frequency"
-        )
-
-        fig = px.histogram(
-            view,
-            x="Actual",
-            nbins=55
-        )
-
-        fig.update_layout(
-            template="plotly_dark",
-            height=400
-        )
-
-        st.plotly_chart(
-            fig,
-            use_container_width=True
-        )
-
-    with col2:
-
-        section_header(
-            "🔧 Maintenance Composition",
-            "Maintenance contribution by category"
-        )
-
-        maint_cols = [
-            "Planned_Maintenance",
-            "Forced_Maintenance",
-            "Other_Reasons"
+    station_filter = st.selectbox(
+        "🔎 Select Power Station",
+        [
+            "All Stations"
         ]
-
-        maint_cols = [
-            x for x in maint_cols
-            if x in view.columns
-        ]
-
-        if maint_cols:
-
-            values = view[
-                maint_cols
-            ].sum()
-
-            fig = px.pie(
-                names=values.index,
-                values=values.values,
-                hole=0.58
-            )
-
-            fig.update_layout(
-                template="plotly_dark",
-                height=400
-            )
-
-            st.plotly_chart(
-                fig,
-                use_container_width=True
-            )
-
-    # --------------------------------------------------------
-    # LEADERBOARD
-    # --------------------------------------------------------
+        + sorted(
+            df["Power_Station"]
+            .dropna()
+            .unique()
+            .tolist()
+        ),
+    )
 
     if station_filter == "All Stations":
 
-        st.divider()
+        view_df = df
 
-        section_header(
-            "🏆 Station Performance Leaderboard",
-            "Top 15 stations by total actual generation"
-        )
+    else:
 
-        if not station_perf.empty:
+        view_df = df[
+            df["Power_Station"] == station_filter
+        ]
 
-            if "Actual_sum" in station_perf.columns:
+    # ------------------------------------------------------------
+    # SECOND KPI ROW
+    # ------------------------------------------------------------
 
-                top = (
-                    station_perf
-                    .sort_values(
-                        "Actual_sum",
-                        ascending=False
-                    )
-                    .head(15)
-                )
-
-                fig = px.bar(
-                    top,
-                    x="Actual_sum",
-                    y="Power_Station",
-                    orientation="h",
-                    text_auto=".2s"
-                )
-
-                fig.update_layout(
-                    template="plotly_dark",
-                    height=520,
-                    yaxis={
-                        "categoryorder":
-                        "total ascending"
-                    }
-                )
-
-                st.plotly_chart(
-                    fig,
-                    use_container_width=True
-                )
-
-
-# ============================================================
-# 12. STATION INTELLIGENCE
-# ============================================================
-
-elif page == "🏭 Station Intelligence":
-
-    st.title(
-        "🏭 Power Station Intelligence"
+    total_capacity = analytics.total_monitored_capacity(
+        view_df
     )
 
-    station = st.selectbox(
-        "Select Power Station",
-        sorted(
-            df["Power_Station"].unique()
+    maintenance = view_df[
+        "Total_Maintenance"
+    ].sum()
+
+    cols = st.columns(4)
+
+    with cols[0]:
+
+        kpi(
+            "🔋",
+            "Monitored Capacity",
+            utils.fmt_mw(total_capacity),
         )
+
+    with cols[1]:
+
+        kpi(
+            "🛠️",
+            "Maintenance",
+            utils.fmt_mw(maintenance),
+        )
+
+    with cols[2]:
+
+        kpi(
+            "📉",
+            "Shortfall",
+            utils.fmt_mw(total_shortfall),
+        )
+
+    with cols[3]:
+
+        kpi(
+            "📋",
+            "Records",
+            f"{len(view_df):,}",
+        )
+
+    st.write("")
+
+    # ------------------------------------------------------------
+    # CHARTS
+    # ------------------------------------------------------------
+
+    section(
+        "Generation Intelligence",
+        "Interactive overview of station generation behaviour",
     )
-
-    data = df[
-        df["Power_Station"] ==
-        station
-    ].copy()
-
-    summary = station_perf[
-        station_perf["Power_Station"] ==
-        station
-    ]
-
-    if data.empty:
-
-        st.warning(
-            "No data found."
-        )
-
-        st.stop()
-
-    avg_programme = data[
-        "Programme"
-    ].mean()
-
-    avg_actual = data[
-        "Actual"
-    ].mean()
-
-    avg_shortfall = data[
-        "Excess_Shortfall"
-    ].mean()
-
-    avg_capacity = data[
-        "Monitored_Capacity"
-    ].mean()
-
-    achievement = (
-        avg_actual /
-        avg_programme *
-        100
-        if avg_programme
-        else 0
-    )
-
-    c1, c2, c3, c4 = st.columns(4)
-
-    with c1:
-
-        glass_metric(
-            "Capacity",
-            safe_mw(avg_capacity),
-            "Average monitored capacity",
-            "⚡"
-        )
-
-    with c2:
-
-        glass_metric(
-            "Programme",
-            safe_mw(avg_programme),
-            "Average target",
-            "🎯"
-        )
-
-    with c3:
-
-        glass_metric(
-            "Actual",
-            safe_mw(avg_actual),
-            "Average generation",
-            "🔋"
-        )
-
-    with c4:
-
-        glass_metric(
-            "Achievement",
-            safe_pct(achievement),
-            "Station performance",
-            "📈"
-        )
-
-    st.divider()
-
-    # Trend
 
     c1, c2 = st.columns(2)
 
     with c1:
 
-        section_header(
-            "📈 Generation Trend",
-            station
-        )
-
-        chart_data = data.reset_index()
-
-        fig = go.Figure()
-
-        fig.add_trace(
-            go.Scatter(
-                y=chart_data["Programme"],
-                mode="lines",
-                name="Programme"
-            )
-        )
-
-        fig.add_trace(
-            go.Scatter(
-                y=chart_data["Actual"],
-                mode="lines",
-                name="Actual"
-            )
+        fig = px.histogram(
+            view_df,
+            x="Actual",
+            nbins=50,
+            title="⚡ Actual Generation Distribution",
         )
 
         fig.update_layout(
             template="plotly_dark",
-            height=430
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
         )
 
         st.plotly_chart(
             fig,
-            use_container_width=True
+            use_container_width=True,
         )
 
     with c2:
 
-        section_header(
-            "🔧 Maintenance Profile",
-            station
+        comp = analytics.maintenance_composition(
+            view_df
         )
 
-        cols = [
-            "Planned_Maintenance",
-            "Forced_Maintenance",
-            "Other_Reasons"
-        ]
-
-        cols = [
-            x for x in cols
-            if x in data.columns
-        ]
-
-        if cols:
-
-            maintenance = data[
-                cols
-            ].sum()
-
-            fig = px.bar(
-                x=maintenance.index,
-                y=maintenance.values,
-                text_auto=".2f"
-            )
-
-            fig.update_layout(
-                template="plotly_dark",
-                height=430
-            )
-
-            st.plotly_chart(
-                fig,
-                use_container_width=True
-            )
-
-    # Summary
-
-    if not summary.empty:
-
-        st.divider()
-
-        section_header(
-            "📊 Station KPI Summary"
+        fig = px.pie(
+            names=list(comp.keys()),
+            values=list(comp.values()),
+            hole=0.55,
+            title="🛠️ Maintenance Composition",
         )
 
-        st.dataframe(
-            summary,
+        fig.update_layout(
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+        )
+
+        st.plotly_chart(
+            fig,
             use_container_width=True,
-            hide_index=True
+        )
+
+    # ------------------------------------------------------------
+    # STATION RANKING
+    # ------------------------------------------------------------
+
+    if station_filter == "All Stations":
+
+        top15 = (
+            station_perf
+            .sort_values(
+                "Actual_sum",
+                ascending=False,
+            )
+            .head(15)
+        )
+
+        fig = px.bar(
+            top15,
+            x="Actual_sum",
+            y="Power_Station",
+            orientation="h",
+            title="🏆 Top 15 Stations by Actual Generation",
+        )
+
+        fig.update_layout(
+            template="plotly_dark",
+            yaxis={
+                "categoryorder":
+                "total ascending"
+            },
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+        )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
         )
 
 
-# ============================================================
-# 13. AI PREDICTION
-# ============================================================
+# ================================================================
+# POWER STATION ANALYSIS
+# ================================================================
 
-elif page == "🔮 AI Prediction":
+elif page == "🏭 Power Station Analysis":
 
-    st.title(
-        "🔮 AI Generation Prediction"
+    hero(
+        "Power Station Intelligence",
+        "Deep-dive operational analysis for individual generating stations",
+        "🏭",
     )
 
-    st.caption(
-        "Random Forest based generation forecasting engine"
+    station = st.selectbox(
+        "Select Station",
+        sorted(
+            df["Power_Station"]
+            .dropna()
+            .unique()
+            .tolist()
+        ),
+    )
+
+    station_df = df[
+        df["Power_Station"] == station
+    ]
+
+    station_row = station_perf[
+        station_perf["Power_Station"] == station
+    ]
+
+    c1, c2, c3, c4 = st.columns(4)
+
+    with c1:
+        kpi(
+            "🔋",
+            "Capacity",
+            utils.fmt_mw(
+                analytics.total_monitored_capacity(
+                    station_df
+                )
+            ),
+        )
+
+    with c2:
+        kpi(
+            "📋",
+            "Records",
+            f"{len(station_df):,}",
+        )
+
+    with c3:
+        kpi(
+            "⚡",
+            "Average Actual",
+            utils.fmt_mw(
+                station_df["Actual"].mean()
+            ),
+        )
+
+    with c4:
+        kpi(
+            "🎯",
+            "Average Programme",
+            utils.fmt_mw(
+                station_df["Programme"].mean()
+            ),
+        )
+
+    st.write("")
+
+    c1, c2 = st.columns(2)
+
+    with c1:
+
+        fig = px.line(
+            station_df.reset_index(),
+            y="Actual",
+            title="⚡ Actual Generation Trend",
+        )
+
+        fig.update_layout(
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+        )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+        )
+
+    with c2:
+
+        maint = station_df[
+            [
+                "Planned_Maintenance",
+                "Forced_Maintenance",
+                "Other_Reasons",
+            ]
+        ].sum()
+
+        fig = px.pie(
+            names=maint.index,
+            values=maint.values,
+            hole=0.5,
+            title="🛠️ Maintenance Breakdown",
+        )
+
+        fig.update_layout(
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+        )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+        )
+
+    if not station_row.empty:
+
+        r = station_row.iloc[0]
+
+        st.subheader("Station Performance Indicators")
+
+        c1, c2, c3 = st.columns(3)
+
+        with c1:
+            kpi(
+                "🎯",
+                "Programme Achievement",
+                utils.fmt_pct(
+                    r["Programme_Achievement_pct"]
+                ),
+            )
+
+        with c2:
+            kpi(
+                "🔋",
+                "Capacity Utilization",
+                utils.fmt_pct(
+                    r["Capacity_Utilization_pct"]
+                ),
+            )
+
+        with c3:
+            kpi(
+                "🛠️",
+                "Maintenance Impact",
+                utils.fmt_pct(
+                    r["Maintenance_Impact_Index_pct"]
+                ),
+            )
+
+
+# ================================================================
+# GENERATION PREDICTION
+# ================================================================
+
+elif page == "🔮 Generation Prediction":
+
+    hero(
+        "AI Generation Predictor",
+        "Predict expected actual generation using the trained Random Forest model",
+        "🔮",
     )
 
     if not MODELS_OK:
 
         st.error(
-            "❌ Random Forest model is unavailable."
+            "Random Forest model is not available."
         )
 
-        if model_errors:
-
-            st.json(
-                model_errors
-            )
+        st.info(
+            "Check the models/Random_Forest.joblib file."
+        )
 
         st.stop()
 
     stations = sorted(
-        df["Power_Station"].unique()
+        df["Power_Station"]
+        .dropna()
+        .unique()
+        .tolist()
     )
 
-    with st.form(
-        "ai_prediction_form"
-    ):
+    with st.form("prediction_form"):
 
         c1, c2 = st.columns(2)
 
@@ -1805,476 +1276,459 @@ elif page == "🔮 AI Prediction":
 
             station = st.selectbox(
                 "🏭 Power Station",
-                stations
+                stations,
             )
 
-            capacity = st.number_input(
-                "Monitored Capacity (MW)",
+            monitored_capacity = st.number_input(
+                "🔋 Monitored Capacity (MW)",
                 min_value=0.0,
                 value=500.0,
-                step=10.0
+                step=10.0,
             )
 
             programme = st.number_input(
-                "Programme Generation (MW)",
+                "🎯 Programme Generation (MW)",
                 min_value=0.0,
                 value=50.0,
-                step=1.0
+                step=1.0,
             )
 
         with c2:
 
             planned = st.number_input(
-                "Planned Maintenance (MW)",
+                "🛠️ Planned Maintenance (MW)",
                 min_value=0.0,
                 value=0.0,
-                step=1.0
+                step=1.0,
             )
 
             forced = st.number_input(
-                "Forced Maintenance (MW)",
+                "🚨 Forced Maintenance (MW)",
                 min_value=0.0,
                 value=0.0,
-                step=1.0
+                step=1.0,
             )
 
             other = st.number_input(
-                "Other Reasons (MW)",
+                "📌 Other Reasons (MW)",
                 min_value=0.0,
                 value=0.0,
-                step=1.0
+                step=1.0,
             )
 
-        submit = st.form_submit_button(
-            "⚡ RUN AI FORECAST",
-            use_container_width=True
+        submitted = st.form_submit_button(
+            "⚡ RUN AI PREDICTION",
+            use_container_width=True,
         )
 
-    if submit:
+    if submitted:
 
         with st.spinner(
-            "🤖 AI engine analysing operating conditions..."
+            "AI model is analysing operating conditions..."
         ):
+
+            time.sleep(1)
 
             try:
 
-                time.sleep(0.8)
+                errors = utils.validate_prediction_inputs(
+                    monitored_capacity,
+                    programme,
+                    planned,
+                    forced,
+                    other,
+                )
 
-                feature_row = (
-                    prediction.build_feature_row(
+                blocking = [
+                    e
+                    for e in errors
+                    if not e.startswith("Warning")
+                ]
+
+                for e in errors:
+
+                    if e.startswith("Warning"):
+                        st.warning(e)
+
+                if blocking:
+
+                    for e in blocking:
+                        st.error(e)
+
+                else:
+
+                    feature_row = prediction.build_feature_row(
                         station,
-                        capacity,
+                        monitored_capacity,
                         programme,
                         planned,
                         forced,
-                        other
+                        other,
                     )
-                )
 
-                model = models[
-                    "Random_Forest"
-                ]
+                    model = models[
+                        "Random_Forest"
+                    ]
 
-                predicted = (
-                    prediction.predict(
+                    predicted = prediction.predict(
                         model,
-                        feature_row
+                        feature_row,
                     )
-                )
 
-                shortfall = (
-                    predicted -
-                    programme
-                )
+                    shortfall = (
+                        predicted - programme
+                    )
 
-                achievement = (
-                    predicted /
-                    programme *
-                    100
-                    if programme
-                    else 0
-                )
+                    achievement = (
+                        predicted
+                        / programme
+                        * 100
+                        if programme > 0
+                        else None
+                    )
 
-                available = (
-                    capacity -
-                    planned -
-                    forced -
-                    other
-                )
+                    available = (
+                        monitored_capacity
+                        - (
+                            planned
+                            + forced
+                            + other
+                        )
+                    )
 
-                risk = (
-                    prediction.risk_level(
+                    mii = feature_row[
+                        "Maintenance_Impact_Index"
+                    ].iloc[0]
+
+                    risk = prediction.risk_level(
                         predicted,
-                        programme
-                    )
-                )
-
-                st.success(
-                    "✅ AI forecast generated successfully."
-                )
-
-                c1, c2, c3 = st.columns(3)
-
-                with c1:
-
-                    glass_metric(
-                        "Predicted Generation",
-                        safe_mw(predicted),
-                        "AI forecast",
-                        "🔮"
+                        programme,
                     )
 
-                with c2:
-
-                    glass_metric(
-                        "Expected Difference",
-                        safe_mw(shortfall),
-                        "Prediction − programme",
-                        "📊"
+                    st.success(
+                        "✅ AI Prediction Completed"
                     )
 
-                with c3:
+                    c1, c2, c3 = st.columns(3)
 
-                    glass_metric(
-                        "Achievement",
-                        safe_pct(achievement),
-                        "Expected programme achievement",
-                        "🎯"
-                    )
-
-                st.write("")
-
-                c1, c2, c3 = st.columns(3)
-
-                with c1:
-
-                    glass_metric(
-                        "Available Capacity",
-                        safe_mw(available),
-                        "After maintenance",
-                        "⚡"
-                    )
-
-                with c2:
-
-                    glass_metric(
-                        "Maintenance Load",
-                        safe_mw(
-                            planned +
-                            forced +
-                            other
-                        ),
-                        "Total maintenance",
-                        "🔧"
-                    )
-
-                with c3:
-
-                    st.markdown(
-                        "### Risk Assessment"
-                    )
-
-                    st.markdown(
-                        risk_html(risk),
-                        unsafe_allow_html=True
-                    )
-
-                # Gauge
-
-                st.divider()
-
-                section_header(
-                    "🎯 AI Performance Gauge"
-                )
-
-                gauge = go.Figure(
-                    go.Indicator(
-                        mode="gauge+number",
-                        value=min(
-                            max(
-                                achievement,
-                                0
+                    with c1:
+                        kpi(
+                            "⚡",
+                            "Predicted Actual",
+                            utils.fmt_mw(
+                                predicted
                             ),
-                            120
-                        ),
-                        number={
-                            "suffix": "%"
-                        },
-                        title={
-                            "text":
-                            "Expected Achievement"
-                        },
-                        gauge={
-                            "axis": {
-                                "range":
-                                [0, 120]
-                            },
-                            "bar": {
-                                "thickness":
-                                0.25
-                            },
-                            "threshold": {
-                                "line": {
-                                    "width": 5
-                                },
-                                "value": 100
-                            }
-                        }
-                    )
-                )
-
-                gauge.update_layout(
-                    template="plotly_dark",
-                    height=350
-                )
-
-                st.plotly_chart(
-                    gauge,
-                    use_container_width=True
-                )
-
-                # Explanation
-
-                section_header(
-                    "🧠 Why did the AI predict this?",
-                    "Feature contribution analysis"
-                )
-
-                try:
-
-                    (
-                        bias,
-                        contributions,
-                        reconstruction
-                    ) = prediction.explain_prediction(
-                        model,
-                        feature_row
-                    )
-
-                    series = (
-                        pd.Series(
-                            contributions
                         )
-                        .sort_values(
-                            key=abs,
-                            ascending=False
+
+                    with c2:
+                        kpi(
+                            "📉",
+                            "Shortfall / Excess",
+                            utils.fmt_mw(
+                                shortfall
+                            ),
                         )
-                    )
 
-                    fig = go.Figure(
-                        go.Bar(
-                            x=series.values,
-                            y=series.index,
-                            orientation="h"
+                    with c3:
+                        kpi(
+                            "🎯",
+                            "Achievement",
+                            utils.fmt_pct(
+                                achievement
+                            )
+                            if achievement is not None
+                            else "N/A",
                         )
-                    )
 
-                    fig.update_layout(
-                        template="plotly_dark",
-                        height=500,
-                        title=(
-                            f"Prediction Drivers "
-                            f"(Base: {bias:.2f} MW)"
+                    c1, c2, c3 = st.columns(3)
+
+                    with c1:
+                        kpi(
+                            "🔋",
+                            "Available Capacity",
+                            utils.fmt_mw(
+                                available
+                            ),
                         )
+
+                    with c2:
+                        kpi(
+                            "🛠️",
+                            "Maintenance Impact",
+                            utils.fmt_pct(mii),
+                        )
+
+                    with c3:
+
+                        emoji = {
+                            "LOW": "🟢",
+                            "MEDIUM": "🟡",
+                            "HIGH": "🟠",
+                            "CRITICAL": "🔴",
+                        }.get(
+                            risk,
+                            "⚪",
+                        )
+
+                        kpi(
+                            "🚦",
+                            "Risk Level",
+                            f"{emoji} {risk}",
+                        )
+
+                    # ------------------------------------------------
+                    # EXPLANATION
+                    # ------------------------------------------------
+
+                    st.divider()
+
+                    section(
+                        "🧠 AI Decision Explanation",
+                        "Understand which operating factors influenced the prediction",
                     )
 
-                    st.plotly_chart(
-                        fig,
-                        use_container_width=True
-                    )
+                    try:
 
-                except Exception as e:
+                        bias, contributions, recon = (
+                            prediction.explain_prediction(
+                                model,
+                                feature_row,
+                            )
+                        )
 
-                    st.info(
-                        "Detailed explanation unavailable."
-                    )
+                        series = (
+                            pd.Series(contributions)
+                            .sort_values(
+                                key=abs,
+                                ascending=False,
+                            )
+                        )
+
+                        fig = go.Figure(
+                            go.Bar(
+                                x=series.values,
+                                y=series.index,
+                                orientation="h",
+                            )
+                        )
+
+                        fig.update_layout(
+                            template="plotly_dark",
+                            title=(
+                                f"Feature Contributions "
+                                f"(Base: {bias:.2f} MW)"
+                            ),
+                            paper_bgcolor="rgba(0,0,0,0)",
+                            plot_bgcolor="rgba(0,0,0,0)",
+                        )
+
+                        st.plotly_chart(
+                            fig,
+                            use_container_width=True,
+                        )
+
+                    except Exception as e:
+
+                        st.info(
+                            f"Explanation unavailable: {e}"
+                        )
 
             except Exception as e:
 
                 st.error(
-                    "❌ Prediction failed."
+                    "Prediction failed."
                 )
 
-                st.exception(e)
+                st.code(str(e))
 
 
-# ============================================================
-# 14. WHAT-IF SIMULATOR
-# ============================================================
+# ================================================================
+# WHAT IF SIMULATOR
+# ================================================================
 
 elif page == "🎛️ What-If Simulator":
 
-    st.title(
-        "🎛️ What-If Scenario Simulator"
-    )
-
-    st.caption(
-        "Change operating conditions and immediately evaluate AI-predicted generation."
+    hero(
+        "What-If Power Simulator",
+        "Experiment with operational conditions and instantly see predicted outcomes",
+        "🎛️",
     )
 
     if not MODELS_OK:
 
         st.error(
-            "AI model unavailable."
+            "Random Forest model unavailable."
         )
 
         st.stop()
 
-    station = st.selectbox(
-        "🏭 Select Station",
-        sorted(
-            df["Power_Station"].unique()
-        )
+    stations = sorted(
+        df["Power_Station"]
+        .dropna()
+        .unique()
+        .tolist()
     )
 
-    station_data = df[
-        df["Power_Station"] ==
-        station
+    station = st.selectbox(
+        "🏭 Simulation Station",
+        stations,
+    )
+
+    station_df = df[
+        df["Power_Station"] == station
     ]
 
     base_capacity = float(
-        station_data[
+        station_df[
             "Monitored_Capacity"
         ].mean()
     )
 
     base_programme = float(
-        station_data[
+        station_df[
             "Programme"
         ].mean()
     )
 
-    st.divider()
+    st.subheader(
+        "🎚️ Adjust Operating Conditions"
+    )
 
     c1, c2 = st.columns(2)
 
     with c1:
 
         programme = st.slider(
-            "🎯 Programme (MW)",
+            "Programme Generation (MW)",
             0.0,
             max(
                 base_capacity * 1.2,
-                1
+                1.0,
             ),
             min(
                 base_programme,
-                base_capacity * 1.2
-            )
+                max(
+                    base_capacity * 1.2,
+                    1.0,
+                ),
+            ),
         )
 
         planned = st.slider(
-            "🔧 Planned Maintenance",
+            "Planned Maintenance (MW)",
             0.0,
             max(base_capacity, 1.0),
-            0.0
+            0.0,
         )
 
     with c2:
 
         forced = st.slider(
-            "🚨 Forced Maintenance",
+            "Forced Maintenance (MW)",
             0.0,
             max(base_capacity, 1.0),
-            0.0
+            0.0,
         )
 
         other = st.slider(
-            "⚙️ Other Reasons",
+            "Other Reasons (MW)",
             0.0,
             max(base_capacity, 1.0),
-            0.0
+            0.0,
         )
 
     try:
 
-        features = (
-            prediction.build_feature_row(
-                station,
-                base_capacity,
-                programme,
-                planned,
-                forced,
-                other
-            )
+        feature_row = prediction.build_feature_row(
+            station,
+            base_capacity,
+            programme,
+            planned,
+            forced,
+            other,
         )
 
         predicted = prediction.predict(
             models["Random_Forest"],
-            features
+            feature_row,
         )
 
         risk = prediction.risk_level(
             predicted,
-            programme
+            programme,
         )
 
         available = (
-            base_capacity -
-            planned -
-            forced -
-            other
+            base_capacity
+            - planned
+            - forced
+            - other
         )
 
         st.divider()
 
-        section_header(
-            "📊 Scenario Output",
-            "AI simulated operational result"
+        section(
+            "Simulation Results",
+            "Live model response to your selected scenario",
         )
 
         c1, c2, c3, c4 = st.columns(4)
 
         with c1:
-
-            glass_metric(
-                "Predicted Actual",
-                safe_mw(predicted),
-                "Scenario generation",
-                "🔮"
+            kpi(
+                "⚡",
+                "Predicted Generation",
+                utils.fmt_mw(predicted),
             )
 
         with c2:
-
-            glass_metric(
-                "Programme",
-                safe_mw(programme),
-                "Target",
-                "🎯"
+            kpi(
+                "🔋",
+                "Available Capacity",
+                utils.fmt_mw(available),
             )
 
         with c3:
-
-            glass_metric(
-                "Available Capacity",
-                safe_mw(available),
-                "After maintenance",
-                "⚡"
+            kpi(
+                "📊",
+                "Difference",
+                utils.fmt_mw(
+                    predicted - programme
+                ),
             )
 
         with c4:
 
-            st.markdown(
-                "### Scenario Risk"
+            emoji = {
+                "LOW": "🟢",
+                "MEDIUM": "🟡",
+                "HIGH": "🟠",
+                "CRITICAL": "🔴",
+            }.get(
+                risk,
+                "⚪",
             )
 
-            st.markdown(
-                risk_html(risk),
-                unsafe_allow_html=True
+            kpi(
+                "🚦",
+                "Risk",
+                f"{emoji} {risk}",
             )
+
+        # Comparison chart
 
         chart_df = pd.DataFrame(
             {
                 "Metric": [
                     "Programme",
                     "Predicted",
-                    "Available"
+                    "Available Capacity",
                 ],
                 "MW": [
                     programme,
                     predicted,
-                    available
-                ]
+                    available,
+                ],
             }
         )
 
@@ -2282,175 +1736,165 @@ elif page == "🎛️ What-If Simulator":
             chart_df,
             x="Metric",
             y="MW",
-            text_auto=".2f"
+            title="Scenario Comparison",
         )
 
         fig.update_layout(
             template="plotly_dark",
-            height=400
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
         )
 
         st.plotly_chart(
             fig,
-            use_container_width=True
+            use_container_width=True,
         )
 
     except Exception as e:
 
         st.error(
-            f"Scenario simulation failed: {e}"
+            f"Simulation failed: {e}"
         )
 
 
-# ============================================================
-# 15. MAINTENANCE AI
-# ============================================================
+# ================================================================
+# MAINTENANCE
+# ================================================================
 
-elif page == "🔧 Maintenance AI":
+elif page == "🔧 Maintenance Analysis":
 
-    st.title(
-        "🔧 Maintenance Intelligence"
+    hero(
+        "Maintenance Intelligence",
+        "Identify maintenance patterns and operational impact",
+        "🔧",
     )
 
-    st.caption(
-        "Analyse maintenance patterns and identify high-impact stations."
+    comp = analytics.maintenance_composition(
+        df
     )
-
-    cols = [
-        "Planned_Maintenance",
-        "Forced_Maintenance",
-        "Other_Reasons"
-    ]
-
-    cols = [
-        x for x in cols
-        if x in df.columns
-    ]
-
-    if not cols:
-
-        st.warning(
-            "Maintenance data unavailable."
-        )
-
-        st.stop()
-
-    totals = df[
-        cols
-    ].sum()
-
-    total = totals.sum()
 
     c1, c2, c3 = st.columns(3)
 
-    for i, col in enumerate(
-        cols[:3]
-    ):
-
-        share = (
-            totals[col] /
-            total *
-            100
-            if total
-            else 0
+    with c1:
+        kpi(
+            "🟢",
+            "Planned",
+            utils.fmt_pct(
+                comp["Planned"]
+            ),
         )
 
-        [c1, c2, c3][i].markdown(
-            f"""
-            <div class="glass-card">
-
-                <div class="metric-label">
-                    {col.replace("_"," ")}
-                </div>
-
-                <div class="metric-number">
-                    {share:.2f}%
-                </div>
-
-                <div class="metric-info">
-                    Maintenance share
-                </div>
-
-            </div>
-            """,
-            unsafe_allow_html=True
+    with c2:
+        kpi(
+            "🔴",
+            "Forced",
+            utils.fmt_pct(
+                comp["Forced"]
+            ),
         )
 
-    st.divider()
+    with c3:
+        kpi(
+            "🟡",
+            "Other",
+            utils.fmt_pct(
+                comp["Other"]
+            ),
+        )
 
-    fig = px.pie(
-        values=totals.values,
-        names=totals.index,
-        hole=0.58
+    st.write("")
+
+    stations = st.multiselect(
+        "Select stations",
+        sorted(
+            df["Power_Station"]
+            .dropna()
+            .unique()
+            .tolist()
+        ),
+    )
+
+    if stations:
+
+        compare_df = station_perf[
+            station_perf[
+                "Power_Station"
+            ].isin(stations)
+        ]
+
+    else:
+
+        compare_df = (
+            station_perf
+            .sort_values(
+                "Total_Maintenance_avg",
+                ascending=False,
+            )
+            .head(10)
+        )
+
+    fig = px.bar(
+        compare_df,
+        x="Power_Station",
+        y=[
+            "Total_Maintenance_avg",
+            "Forced_Maintenance_avg",
+        ],
+        barmode="group",
+        title="Maintenance Comparison",
     )
 
     fig.update_layout(
         template="plotly_dark",
-        height=450
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
     )
 
     st.plotly_chart(
         fig,
-        use_container_width=True
+        use_container_width=True,
     )
 
-    if (
-        not station_perf.empty
-        and
-        "Total_Maintenance_avg"
-        in station_perf.columns
-    ):
+    fig2 = px.bar(
+        compare_df,
+        x="Power_Station",
+        y="Maintenance_Impact_Index_pct",
+        title="Maintenance Impact Index",
+    )
 
-        section_header(
-            "🏭 Maintenance Impact Ranking"
-        )
+    fig2.update_layout(
+        template="plotly_dark",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+    )
 
-        top = (
-            station_perf
-            .sort_values(
-                "Total_Maintenance_avg",
-                ascending=False
-            )
-            .head(15)
-        )
+    st.plotly_chart(
+        fig2,
+        use_container_width=True,
+    )
 
-        fig = px.bar(
-            top,
-            x="Total_Maintenance_avg",
-            y="Power_Station",
-            orientation="h",
-            text_auto=".2f"
-        )
-
-        fig.update_layout(
-            template="plotly_dark",
-            height=520,
-            yaxis={
-                "categoryorder":
-                "total ascending"
-            }
-        )
-
-        st.plotly_chart(
-            fig,
-            use_container_width=True
-        )
+    st.dataframe(
+        compare_df,
+        use_container_width=True,
+    )
 
 
-# ============================================================
-# 16. MODEL PERFORMANCE
-# ============================================================
+# ================================================================
+# MODEL PERFORMANCE
+# ================================================================
 
 elif page == "📈 Model Performance":
 
-    st.title(
-        "📈 Machine Learning Performance"
+    hero(
+        "Machine Learning Laboratory",
+        "Compare trained models and evaluate prediction quality",
+        "📈",
     )
 
     if model_comparison_df.empty:
 
         st.warning(
-            "model_comparison.csv was not found."
+            "model_comparison.csv not found."
         )
 
         st.stop()
@@ -2458,110 +1902,100 @@ elif page == "📈 Model Performance":
     st.dataframe(
         model_comparison_df,
         use_container_width=True,
-        hide_index=True
     )
 
-    if "R2" in model_comparison_df.columns:
+    best_model = model_comparison_df.loc[
+        model_comparison_df["R2"].idxmax(),
+        "Model",
+    ]
 
-        best_index = (
-            model_comparison_df[
-                "R2"
-            ].idxmax()
-        )
+    st.success(
+        f"🏆 Best Performing Model: {best_model}"
+    )
 
-        best = model_comparison_df.loc[
-            best_index
-        ]
+    c1, c2 = st.columns(2)
 
-        st.success(
-            f"🏆 Best Model: "
-            f"{best['Model']} | "
-            f"R² = {best['R2']:.4f}"
-        )
+    with c1:
 
         fig = px.bar(
             model_comparison_df,
             x="Model",
             y="R2",
-            text_auto=".3f"
+            title="R² Score",
         )
 
         fig.update_layout(
             template="plotly_dark",
-            height=450
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
         )
 
         st.plotly_chart(
             fig,
-            use_container_width=True
+            use_container_width=True,
         )
 
-    if "MAE" in model_comparison_df.columns:
+    with c2:
 
         fig = px.bar(
             model_comparison_df,
             x="Model",
             y="MAE",
-            text_auto=".2f"
+            title="Mean Absolute Error",
         )
 
         fig.update_layout(
             template="plotly_dark",
-            height=450
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
         )
 
         st.plotly_chart(
             fig,
-            use_container_width=True
+            use_container_width=True,
         )
 
 
-# ============================================================
-# 17. EXPLAINABLE AI
-# ============================================================
+# ================================================================
+# EXPLAINABLE AI
+# ================================================================
 
 elif page == "🧠 Explainable AI":
 
-    st.title(
-        "🧠 Explainable AI"
-    )
-
-    st.caption(
-        "Understand what drives PowerGenAI predictions."
+    hero(
+        "Explainable Artificial Intelligence",
+        "Understand why the Random Forest model makes its prediction",
+        "🧠",
     )
 
     if not feature_importance_df.empty:
 
-        section_header(
-            "🌍 Global Feature Importance",
-            "Most influential features in the Random Forest model"
-        )
-
-        top = (
+        top10 = (
             feature_importance_df
-            .head(15)
+            .head(10)
         )
 
         fig = px.bar(
-            top,
+            top10,
             x="importance",
             y="feature",
             orientation="h",
-            text_auto=".3f"
+            title="Global Feature Importance",
         )
 
         fig.update_layout(
             template="plotly_dark",
-            height=600,
             yaxis={
                 "categoryorder":
                 "total ascending"
-            }
+            },
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
         )
 
         st.plotly_chart(
             fig,
-            use_container_width=True
+            use_container_width=True,
         )
 
     st.divider()
@@ -2569,70 +2003,76 @@ elif page == "🧠 Explainable AI":
     if MODELS_OK:
 
         station = st.selectbox(
-            "🏭 Station",
+            "Select Station",
             sorted(
-                df["Power_Station"].unique()
+                df["Power_Station"]
+                .dropna()
+                .unique()
+                .tolist()
             ),
-            key="xai_station"
+            key="xai_station",
         )
 
-        records = df[
-            df["Power_Station"] ==
-            station
-        ].reset_index(
-            drop=True
+        station_records = (
+            df[
+                df["Power_Station"] == station
+            ]
+            .reset_index(drop=True)
         )
 
-        if not records.empty:
+        if not station_records.empty:
 
             idx = st.slider(
-                "📍 Select Record",
+                "Select Record",
                 0,
-                len(records) - 1,
-                0
+                len(station_records) - 1,
+                0,
             )
 
-            row = records.iloc[
+            row = station_records.iloc[
                 idx
             ]
 
+            feature_row = (
+                row[
+                    MODEL_FEATURE_COLUMNS
+                ]
+                .to_frame()
+                .T
+            )
+
             try:
 
-                feature_row = row[
-                    MODEL_FEATURE_COLUMNS
-                ].to_frame().T
-
-                (
-                    bias,
-                    contributions,
-                    reconstructed
-                ) = prediction.explain_prediction(
-                    models["Random_Forest"],
-                    feature_row
+                bias, contributions, reconstructed = (
+                    prediction.explain_prediction(
+                        models[
+                            "Random_Forest"
+                        ],
+                        feature_row,
+                    )
                 )
 
-                c1, c2 = st.columns(2)
+                c1, c2, c3 = st.columns(3)
 
                 with c1:
-
-                    glass_metric(
+                    kpi(
+                        "📌",
                         "Actual",
-                        safe_mw(
-                            row["Actual"]
-                        ),
-                        "Observed generation",
-                        "🔋"
+                        f"{row['Actual']:.2f} MW",
                     )
 
                 with c2:
+                    kpi(
+                        "🤖",
+                        "Prediction",
+                        f"{reconstructed:.2f} MW",
+                    )
 
-                    glass_metric(
-                        "AI Prediction",
-                        safe_mw(
-                            reconstructed
-                        ),
-                        "Model output",
-                        "🤖"
+                with c3:
+                    kpi(
+                        "🎯",
+                        "Error",
+                        f"{abs(row['Actual'] - reconstructed):.2f} MW",
                     )
 
                 series = (
@@ -2641,7 +2081,7 @@ elif page == "🧠 Explainable AI":
                     )
                     .sort_values(
                         key=abs,
-                        ascending=False
+                        ascending=False,
                     )
                 )
 
@@ -2649,394 +2089,172 @@ elif page == "🧠 Explainable AI":
                     go.Bar(
                         x=series.values,
                         y=series.index,
-                        orientation="h"
+                        orientation="h",
                     )
                 )
 
                 fig.update_layout(
                     template="plotly_dark",
-                    height=550,
-                    title="Prediction Contribution Map"
+                    title="Individual Prediction Drivers",
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
                 )
 
                 st.plotly_chart(
                     fig,
-                    use_container_width=True
+                    use_container_width=True,
                 )
 
             except Exception as e:
 
                 st.error(
-                    f"XAI error: {e}"
+                    f"Could not generate explanation: {e}"
                 )
 
 
-# ============================================================
-# 18. ALERT CENTER
-# ============================================================
+# ================================================================
+# REPORTS
+# ================================================================
 
-elif page == "🚨 Alert Center":
+elif page == "📄 Reports":
 
-    st.title(
-        "🚨 Intelligent Alert Center"
-    )
-
-    st.caption(
-        "Automatic detection of operational performance issues."
-    )
-
-    try:
-
-        config = alerts.AlertConfig()
-
-        alert_df = alerts.evaluate_dataframe(
-            df,
-            config
-        )
-
-        if alert_df.empty:
-
-            st.markdown(
-                """
-                <div class="section"
-                     style="text-align:center;padding:50px;">
-
-                    <div style="
-                        font-size:4rem;
-                    ">
-                        🟢
-                    </div>
-
-                    <h2>
-                        All Systems Normal
-                    </h2>
-
-                    <p>
-                        No operational alerts were detected
-                        in the current dataset.
-                    </p>
-
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        else:
-
-            st.error(
-                f"🚨 {len(alert_df)} alerts detected."
-            )
-
-            st.dataframe(
-                alert_df,
-                use_container_width=True,
-                hide_index=True
-            )
-
-            if "type" in alert_df.columns:
-
-                counts = (
-                    alert_df[
-                        "type"
-                    ]
-                    .value_counts()
-                    .reset_index()
-                )
-
-                counts.columns = [
-                    "Alert Type",
-                    "Count"
-                ]
-
-                fig = px.bar(
-                    counts,
-                    x="Alert Type",
-                    y="Count",
-                    text_auto=True
-                )
-
-                fig.update_layout(
-                    template="plotly_dark",
-                    height=400
-                )
-
-                st.plotly_chart(
-                    fig,
-                    use_container_width=True
-                )
-
-    except Exception as e:
-
-        st.error(
-            f"Alert engine error: {e}"
-        )
-
-
-# ============================================================
-# 19. SMART REPORTS
-# ============================================================
-
-elif page == "📄 Smart Reports":
-
-    st.title(
-        "📄 Smart Performance Reports"
+    hero(
+        "Automated Performance Reports",
+        "Generate station-wise operational intelligence reports",
+        "📄",
     )
 
     station = st.selectbox(
-        "🏭 Select Station",
+        "Select Station",
         sorted(
-            df["Power_Station"].unique()
+            df["Power_Station"]
+            .dropna()
+            .unique()
+            .tolist()
         ),
-        key="report_station"
+        key="report_station",
     )
 
-    data = df[
-        df["Power_Station"] ==
-        station
+    station_df = df[
+        df["Power_Station"] == station
+    ]
+
+    station_row = station_perf[
+        station_perf["Power_Station"] == station
     ]
 
     if st.button(
-        "📑 GENERATE AI REPORT",
-        use_container_width=True
+        "📄 GENERATE REPORT",
+        use_container_width=True,
     ):
 
-        try:
+        with st.spinner(
+            "Generating intelligent report..."
+        ):
 
-            config = alerts.AlertConfig()
+            time.sleep(0.8)
 
-            alert_df = (
+            cfg = alerts.AlertConfig()
+
+            station_alerts = (
                 alerts.evaluate_dataframe(
-                    data,
-                    config
+                    station_df,
+                    cfg,
                 )
             )
 
-            programme = (
-                data["Programme"].mean()
+            lines = [
+                f"# PowerGenAI Performance Report — {station}",
+                "",
+                f"**Records analysed:** {len(station_df)}",
+                "",
+                "## Generation KPIs",
+                "",
+                f"- Average Programme: {utils.fmt_mw(station_df['Programme'].mean())}",
+                f"- Average Actual: {utils.fmt_mw(station_df['Actual'].mean())}",
+                f"- Average Shortfall/Excess: {utils.fmt_mw(station_df['Excess_Shortfall'].mean())}",
+                "",
+                "## Maintenance KPIs",
+                "",
+                f"- Average Total Maintenance: {utils.fmt_mw(station_df['Total_Maintenance'].mean())}",
+                f"- Average Forced Maintenance: {utils.fmt_mw(station_df['Forced_Maintenance'].mean())}",
+                "",
+            ]
+
+            if not station_row.empty:
+
+                r = station_row.iloc[0]
+
+                lines += [
+                    "## Station Performance",
+                    "",
+                    f"- Programme Achievement: {utils.fmt_pct(r['Programme_Achievement_pct'])}",
+                    f"- Capacity Utilization: {utils.fmt_pct(r['Capacity_Utilization_pct'])}",
+                    f"- Maintenance Impact Index: {utils.fmt_pct(r['Maintenance_Impact_Index_pct'])}",
+                    "",
+                ]
+
+            lines.append(
+                "## Alerts"
             )
 
-            actual = (
-                data["Actual"].mean()
+            if station_alerts.empty:
+
+                lines.append(
+                    "- No alerts triggered."
+                )
+
+            else:
+
+                for alert_type, count in (
+                    station_alerts[
+                        "type"
+                    ]
+                    .value_counts()
+                    .items()
+                ):
+
+                    lines.append(
+                        f"- {alert_type}: {count} record(s)"
+                    )
+
+            report = "\n".join(
+                lines
             )
-
-            achievement = (
-                actual /
-                programme *
-                100
-                if programme
-                else 0
-            )
-
-            report = f"""
-# ⚡ PowerGenAI Performance Report
-
-## Power Station
-
-**{station}**
-
----
-
-## 📊 Generation Performance
-
-Records Analysed:
-**{len(data)}**
-
-Average Programme:
-**{safe_mw(programme)}**
-
-Average Actual Generation:
-**{safe_mw(actual)}**
-
-Average Shortfall / Excess:
-**{safe_mw(data["Excess_Shortfall"].mean())}**
-
-Programme Achievement:
-**{safe_pct(achievement)}**
-
----
-
-## 🔧 Maintenance Performance
-
-Planned Maintenance:
-**{safe_mw(data["Planned_Maintenance"].mean())}**
-
-Forced Maintenance:
-**{safe_mw(data["Forced_Maintenance"].mean())}**
-
-Other Reasons:
-**{safe_mw(data["Other_Reasons"].mean())}**
-
----
-
-## 🚨 Alerts
-
-Total Alerts:
-**{len(alert_df)}**
-
----
-
-## 🤖 PowerGenAI Summary
-
-PowerGenAI analysed operational generation,
-programme performance and maintenance conditions
-for the selected station.
-
----
-
-Generated by PowerGenAI V2
-AI-Based Power Generation Forecasting &
-Power Station Performance Monitoring System
-"""
 
             st.markdown(
                 report
             )
 
             st.download_button(
-                "⬇️ DOWNLOAD REPORT",
+                "⬇️ DOWNLOAD MARKDOWN REPORT",
                 report,
                 file_name=(
-                    f"PowerGenAI_"
-                    f"{station}_Report.md"
+                    f"PowerGenAI_Report_"
+                    f"{station}.md"
                 ),
                 mime="text/markdown",
-                use_container_width=True
-            )
-
-        except Exception as e:
-
-            st.error(
-                f"Report generation failed: {e}"
+                use_container_width=True,
             )
 
 
-# ============================================================
-# 20. DATA EXPLORER
-# ============================================================
-
-elif page == "📋 Data Explorer":
-
-    st.title(
-        "📋 Power Generation Data Explorer"
-    )
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-
-        glass_metric(
-            "Rows",
-            f"{len(df):,}",
-            "Dataset records",
-            "📊"
-        )
-
-    with c2:
-
-        glass_metric(
-            "Features",
-            f"{len(df.columns):,}",
-            "Available variables",
-            "🧬"
-        )
-
-    with c3:
-
-        glass_metric(
-            "Stations",
-            f"{df['Power_Station'].nunique():,}",
-            "Monitored stations",
-            "🏭"
-        )
-
-    st.divider()
-
-    station = st.selectbox(
-        "🏭 Station Filter",
-        ["All"] +
-        sorted(
-            df["Power_Station"].unique()
-        )
-    )
-
-    if station == "All":
-
-        filtered = df.copy()
-
-    else:
-
-        filtered = df[
-            df["Power_Station"] ==
-            station
-        ].copy()
-
-    search = st.text_input(
-        "🔎 Search dataset"
-    )
-
-    if search:
-
-        mask = filtered.astype(
-            str
-        ).apply(
-            lambda column:
-            column.str.contains(
-                search,
-                case=False,
-                na=False
-            )
-        ).any(
-            axis=1
-        )
-
-        filtered = filtered[
-            mask
-        ]
-
-    st.dataframe(
-        filtered,
-        use_container_width=True,
-        hide_index=True
-    )
-
-    csv = filtered.to_csv(
-        index=False
-    ).encode("utf-8")
-
-    st.download_button(
-        "⬇️ DOWNLOAD FILTERED DATA",
-        csv,
-        "PowerGenAI_filtered_data.csv",
-        "text/csv",
-        use_container_width=True
-    )
-
-
-# ============================================================
-# 21. FOOTER
-# ============================================================
+# ================================================================
+# FOOTER
+# ================================================================
 
 st.markdown(
     """
-    <div class="footer">
+<div class="footer">
 
-        ⚡ <b style="color:#93c5fd;">
-        PowerGenAI V2
-        </b>
+⚡ <b>PowerGenAI</b> · AI-Based Power Generation
+Forecasting & Performance Monitoring
 
-        <br><br>
+<br><br>
 
-        AI-Based Power Generation Forecasting &
-        Power Station Performance Monitoring System
+Machine Learning · Predictive Analytics ·
+Explainable AI · Interactive Visualization
 
-        <br>
-
-        <span style="color:#475569;">
-        Intelligent Analytics • Predictive Monitoring •
-        Explainable AI • Operational Decision Support
-        </span>
-
-    </div>
-    """,
-    unsafe_allow_html=True
+</div>
+""",
+    unsafe_allow_html=True,
 )
