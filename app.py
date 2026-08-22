@@ -103,6 +103,7 @@ page = st.sidebar.radio("Navigate", [
     "📊 Dashboard",
     "🏭 Power Station Analysis",
     "🔮 Generation Prediction",
+    "🎛️ What-If Simulator",
     "🔧 Maintenance Analysis",
     "📈 Model Performance",
     "🧠 Explainable AI",
