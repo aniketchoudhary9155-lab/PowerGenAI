@@ -305,6 +305,57 @@ elif page == "🔮 Generation Prediction":
 
             except Exception as e:
                 st.error(f"Prediction failed: {e}")
+                # ------------------------------------------------------------------
+# PAGE: WHAT-IF SIMULATOR
+# ------------------------------------------------------------------
+elif page == "🎛️ What-If Simulator":
+    st.title("🎛️ What-If Scenario Simulator")
+    st.caption("Change the sliders below to simulate how different conditions affect power generation.")
+
+    if not DATA_OK or not MODELS_OK:
+        st.error("Data or model not available.")
+        st.stop()
+
+    # Base values for simulation
+    station_list = sorted(df['Power_Station'].unique().tolist())
+    sel_station = st.selectbox("Select Station for Simulation", station_list)
+    
+    # Get average values for this station as a starting point
+    station_data = df[df['Power_Station'] == sel_station]
+    base_cap = float(station_data['Monitored_Capacity'].mean())
+    base_prog = float(station_data['Programme'].mean())
+
+    st.subheader("Adjust Operational Parameters")
+    c1, c2 = st.columns(2)
+    with c1:
+        sim_prog = st.slider("Programme (MW)", 0.0, base_cap * 1.2, base_prog)
+        sim_plan = st.slider("Planned Maintenance (MW)", 0.0, base_cap, 0.0)
+    with c2:
+        sim_forced = st.slider("Forced Maintenance (MW)", 0.0, base_cap, 0.0)
+        sim_other = st.slider("Other Reasons (MW)", 0.0, base_cap, 0.0)
+
+    try:
+        # Run prediction on simulated data
+        feature_row = prediction.build_feature_row(
+            sel_station, base_cap, sim_prog, sim_plan, sim_forced, sim_other
+        )
+        model = models['Random_Forest']
+        sim_actual = prediction.predict(model, feature_row)
+        
+        st.divider()
+        st.subheader("Simulation Results")
+        
+        r1, r2, r3 = st.columns(3)
+        r1.metric("Simulated Actual Generation", utils.fmt_mw(sim_actual), 
+                  delta=utils.fmt_mw(sim_actual - sim_prog), delta_color="normal")
+        r2.metric("Available Capacity", utils.fmt_mw(base_cap - (sim_plan + sim_forced + sim_other)))
+        
+        risk = prediction.risk_level(sim_actual, sim_prog)
+        risk_color = {"LOW": "🟢", "MEDIUM": "🟡", "HIGH": "🟠", "CRITICAL": "🔴"}.get(risk, "⚪")
+        r3.metric("Simulated Risk Level", f"{risk_color} {risk}")
+
+    except Exception as e:
+        st.error(f"Simulation failed: {e}")
 
 # ------------------------------------------------------------------
 # PAGE: MAINTENANCE ANALYSIS
