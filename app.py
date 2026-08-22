@@ -22,8 +22,8 @@ from features import MODEL_FEATURE_COLUMNS
 # ------------------------------------------------------------------
 st.set_page_config(page_title="PowerGenAI", page_icon="⚡", layout="wide")
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'processed')
-MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'models')
+DATA_DIR = 'data/processed'
+MODELS_DIR = 'models'
 
 
 @st.cache_data
