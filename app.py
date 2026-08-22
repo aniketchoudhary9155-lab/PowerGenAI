@@ -404,6 +404,7 @@ Predictive Maintenance Analytics
 # PAGE: DASHBOARD
 # ------------------------------------------------------------------
 if page == "📊 Dashboard":
+    
     hero_html = """
 <div class="powergen-hero">
 
