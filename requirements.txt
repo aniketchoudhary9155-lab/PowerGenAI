@@ -1,0 +1,21 @@
+pandas>=2.0
+numpy>=1.24
+scikit-learn==1.8.0
+matplotlib>=3.7
+plotly>=5.15
+joblib>=1.3
+openpyxl>=3.1
+streamlit>=1.28
+
+# scikit-learn is PINNED (not >=) because the saved .joblib model pipelines
+# were pickled with 1.8.0. Loading them with a different sklearn version can
+# fail with errors like "No module named '_loss'" (internal module layout
+# changed between versions). If you must use a different sklearn version,
+# retrain the models locally instead (see notebooks/03_model_training.ipynb).
+
+# Optional — used in the original design but unavailable in the offline
+# training sandbox this project was built in. Install these for the real
+# thing; the code already has working substitutes (HistGradientBoosting
+# for XGBoost, a tree-path decomposition for SHAP) if you don't.
+# xgboost>=2.0
+# shap>=0.44
