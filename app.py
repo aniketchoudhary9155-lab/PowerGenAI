@@ -12,6 +12,233 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+# ================================================================
+# POWERGENAI PROFESSIONAL UI
+# ================================================================
+
+st.markdown("""
+<style>
+
+.stApp {
+    background:
+        radial-gradient(circle at 10% 0%, rgba(37,99,235,.12), transparent 30%),
+        radial-gradient(circle at 90% 0%, rgba(6,182,212,.10), transparent 28%),
+        #07111f;
+    color: #e5eef8;
+}
+
+.main .block-container {
+    max-width: 1500px;
+    padding-top: 1.5rem;
+    padding-bottom: 3rem;
+}
+
+/* Headings */
+
+h1 {
+    color: #f8fbff !important;
+    font-weight: 800 !important;
+}
+
+h2, h3 {
+    color: #eaf4ff !important;
+    font-weight: 700 !important;
+}
+
+/* Sidebar */
+
+section[data-testid="stSidebar"] {
+    background: linear-gradient(
+        180deg,
+        #081525 0%,
+        #0b1b2e 100%
+    );
+
+    border-right: 1px solid rgba(148,163,184,.15);
+}
+
+section[data-testid="stSidebar"] * {
+    color: #dbeafe;
+}
+
+/* Hero */
+
+.powergen-hero {
+    padding: 25px 30px;
+    border-radius: 20px;
+    margin-bottom: 25px;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(30,64,175,.42),
+            rgba(8,47,73,.48)
+        );
+
+    border: 1px solid rgba(96,165,250,.22);
+
+    box-shadow:
+        0 18px 50px rgba(0,0,0,.25);
+}
+
+.powergen-title {
+    font-size: 34px;
+    font-weight: 850;
+    color: #ffffff;
+}
+
+.powergen-subtitle {
+    color: #9fb8cf;
+    font-size: 15px;
+    margin-top: 5px;
+}
+
+/* Status pills */
+
+.status-container {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+}
+
+.status-pill {
+    padding: 7px 13px;
+    border-radius: 50px;
+
+    background: rgba(15,23,42,.7);
+
+    border: 1px solid rgba(148,163,184,.18);
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.status-green {
+    color: #86efac;
+}
+
+.status-blue {
+    color: #93c5fd;
+}
+
+.status-yellow {
+    color: #fde68a;
+}
+
+/* KPI Cards */
+
+.kpi-card {
+    padding: 20px;
+    min-height: 125px;
+
+    border-radius: 17px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(15,30,50,.96),
+            rgba(10,23,39,.96)
+        );
+
+    border: 1px solid rgba(148,163,184,.14);
+
+    box-shadow:
+        0 12px 30px rgba(0,0,0,.20);
+}
+
+.kpi-label {
+    color: #8fa9c1;
+
+    font-size: 12px;
+
+    font-weight: 700;
+
+    text-transform: uppercase;
+
+    letter-spacing: .7px;
+}
+
+.kpi-value {
+    color: #f8fbff;
+
+    font-size: 28px;
+
+    font-weight: 850;
+
+    margin-top: 8px;
+}
+
+.kpi-description {
+    color: #718aa2;
+
+    font-size: 11px;
+
+    margin-top: 4px;
+}
+
+/* Section headers */
+
+.section-header {
+    margin-top: 25px;
+    margin-bottom: 15px;
+
+    padding-left: 12px;
+
+    border-left:
+        4px solid #38bdf8;
+}
+
+.section-title {
+    font-size: 19px;
+    font-weight: 800;
+    color: #eaf4ff;
+}
+
+.section-subtitle {
+    font-size: 12px;
+    color: #8198ae;
+}
+
+/* Buttons */
+
+.stButton > button {
+    border-radius: 11px;
+
+    border:
+        1px solid rgba(96,165,250,.35);
+
+    font-weight: 750;
+
+    min-height: 42px;
+}
+
+/* Download button */
+
+.stDownloadButton > button {
+    border-radius: 11px;
+    font-weight: 750;
+}
+
+/* Footer */
+
+.powergen-footer {
+    margin-top: 40px;
+
+    padding-top: 18px;
+
+    border-top:
+        1px solid rgba(148,163,184,.12);
+
+    text-align: center;
+
+    color: #607991;
+
+    font-size: 11px;
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import prediction, analytics, alerts, utils
