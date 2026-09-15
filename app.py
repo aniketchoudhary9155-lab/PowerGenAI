@@ -221,12 +221,51 @@ with st.sidebar:
     st.caption(f'Rows: {len(df):,}')
     st.caption(f'Stations: {df.Power_Station.nunique():,}')
     st.caption(f'Columns: {len(df.columns):,}')
+    st.caption('🧪 Techniques: 16')
     st.divider()
     page=st.radio('NAVIGATION',[
         '📊 Executive Dashboard','🏭 Station Intelligence','🔮 AI Generation Prediction','🎛️ Scenario Laboratory',
         '🔧 Maintenance Intelligence','🚨 Alert Center','🕵️ Anomaly Detection','📉 Shortfall & Deviation',
         '🎯 AI Optimization','🧠 Explainable AI','📈 Model Performance','📊 Data Analytics','📑 Reports','📋 Data Explorer'
     ])
+
+    # =========================================================
+    # TECHNIQUES USED — project methodology shown in sidebar
+    # =========================================================
+    st.divider()
+    st.markdown("### 🧪 Techniques Used")
+    st.caption("Methods implemented in PowerGenAI")
+
+    techniques = [
+        ("📊 Data Preprocessing", "Column normalization, numeric conversion, missing-value handling and date parsing."),
+        ("📈 Descriptive Analytics", "Station-wise aggregation, KPIs, statistical summaries and performance indicators."),
+        ("📐 Correlation Analysis", "Correlation matrix to study relationships among generation and maintenance variables."),
+        ("🌲 Extra Trees Regression", "Ensemble machine-learning model used for power-generation prediction."),
+        ("🔤 One-Hot Encoding", "Converts Power Station categories into machine-learning features."),
+        ("🔗 ML Pipeline", "Combines preprocessing and the regression model into one reproducible workflow."),
+        ("✂️ Train-Test Split", "Splits historical data into training and testing subsets for evaluation."),
+        ("🎯 R² / MAE / RMSE", "Regression metrics used to evaluate prediction performance."),
+        ("🚨 Isolation Forest", "Unsupervised anomaly-detection technique for identifying unusual operating records."),
+        ("🧪 Scenario Analysis", "Simulates different forced-maintenance conditions and compares predicted generation."),
+        ("🎯 Optimization Search", "Searches maintenance-reduction scenarios for a desired generation-achievement target."),
+        ("🧠 Explainable AI", "Local sensitivity analysis using controlled feature perturbations."),
+        ("⚠️ Rule-Based Alerts", "Engineering threshold rules for shortfall, maintenance, forced maintenance and deviation."),
+        ("🏭 Station Benchmarking", "Ranks stations using achievement, utilization, maintenance and deviation indicators."),
+        ("💯 Composite Health Score", "Weighted engineering score combining generation and maintenance performance."),
+        ("📉 Shortfall & Deviation Analysis", "Quantifies generation deficit, excess and programme-vs-actual deviation."),
+    ]
+
+    for name, description in techniques:
+        with st.expander(name, expanded=False):
+            st.caption(description)
+
+    st.divider()
+    st.markdown("**🔬 Methodology Flow**")
+    st.markdown(
+        "📥 Data → 🧹 Preprocessing → 📊 Analytics → "
+        "🤖 ML Prediction → 🚨 Anomaly Detection → "
+        "🧪 Scenario Simulation → 🎯 Optimization → 🧠 XAI"
+    )
 
 # -----------------------------
 # Pages
